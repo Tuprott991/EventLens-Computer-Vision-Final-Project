@@ -4,7 +4,7 @@ import timm
 
 class AlbumEventClassifier(nn.Module):
     def __init__(self, 
-                 backbone_name='swin_tiny_patch4_window7_224',  #  SwinV2 as backbone
+                 backbone_name='swin_tiny_patch4_window7_224',  #  Swin as backbone
                  pretrained=True,
                  num_classes=23,
                  aggregator='transformer',
@@ -13,7 +13,7 @@ class AlbumEventClassifier(nn.Module):
 
         self.max_images = max_images
 
-        #  Load SwinV2 backbone
+        #  Load Swin backbone
         self.backbone = timm.create_model(backbone_name, pretrained=pretrained, num_classes=0)
 
         #  Auto-detect `embed_dim`
@@ -60,12 +60,12 @@ class AlbumEventClassifier(nn.Module):
         feats = self.backbone(album_imgs)  # (B*N, D)
         feats = feats.view(B, N, self.embed_dim)  # (B, N, D)
 
+        # Add positional embedding
+        feats = feats + self.pos_embedding[:, :feats.size(1), :]  # (B, N, D)
+
         # Prepare CLS token
         cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, D)
-        feats = torch.cat((cls_tokens, feats), dim=1)  # (B, 1+N, D)
-    
-        # Add positional embedding 
-        feats = feats + self.pos_embedding[:, :feats.size(1), :] # (B, 1+N, D)
+        feats = torch.cat((cls_tokens, feats), dim=1)
 
         if isinstance(self.aggregator, nn.TransformerEncoder):
             agg = self.aggregator(feats)
