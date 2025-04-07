@@ -6,7 +6,8 @@ from torchvision import transforms
 from PIL import Image
 from sklearn.preprocessing import MultiLabelBinarizer
 import numpy as np
-from collections import Counter
+from imblearn.over_sampling import SMOTE
+from sklearn.multioutput import MultiOutputClassifier
 
 
 class AlbumEventDataset(Dataset):
@@ -29,7 +30,7 @@ class AlbumEventDataset(Dataset):
         self.print_label_frequencies()
 
         if self.oversampling:
-            self.encoded_labels, self.album_ids = self.apply_random_oversampling(self.encoded_labels, self.album_ids)
+            self.encoded_labels, self.album_ids = self.apply_smote_multioutput(self.encoded_labels, self.album_ids)
 
         # Print label frequencies after applying oversampling
         self.print_label_frequencies()
@@ -58,27 +59,15 @@ class AlbumEventDataset(Dataset):
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
 
-    def apply_random_oversampling(self, encoded_labels, album_ids):
-        """
-        Applies random oversampling to balance the dataset by duplicating labels.
-        """
-        label_counts = Counter(map(tuple, encoded_labels))  # Count occurrences of each label
-        max_count = max(label_counts.values())  # Get the maximum count of any label
+    def apply_smote_multioutput(self, encoded_labels, album_ids):
+        smote = SMOTE(sampling_strategy='auto', random_state=42)
+        smote_features = np.random.rand(len(encoded_labels), len(encoded_labels[0]))  # Tạo đặc trưng ngẫu nhiên
 
-        resampled_labels = []
-        resampled_album_ids = []
-
-        for idx, label in enumerate(encoded_labels):
-            resampled_labels.append(label)
-            resampled_album_ids.append(album_ids[idx])
-
-            # Add duplicate samples for underrepresented labels
-            while label_counts[tuple(label)] < max_count:
-                resampled_labels.append(label)
-                resampled_album_ids.append(album_ids[idx])
-                label_counts[tuple(label)] += 1
-
-        return np.array(resampled_labels), np.array(resampled_album_ids)
+        # Áp dụng SMOTE cho multilabel bằng MultiOutputClassifier
+        multi_output_model = MultiOutputClassifier(smote)
+        smote_labels_resampled, album_ids_resampled = multi_output_model.fit_resample(smote_features, encoded_labels)
+        
+        return smote_labels_resampled, album_ids_resampled
 
     def print_label_frequencies(self):
         """ Prints the frequency of each label in the dataset. """
