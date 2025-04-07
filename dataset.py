@@ -59,7 +59,7 @@ class AlbumEventDataset(Dataset):
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
 
-    def apply_smote_multioutput(self, encoded_labels, album_ids, target_count=1200):
+    def apply_smote_multioutput(self, encoded_labels, album_ids, target_count=2000):
         encoded_labels = np.array(encoded_labels)
         album_ids = np.array(album_ids)
         num_labels = encoded_labels.shape[1]
