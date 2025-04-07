@@ -13,6 +13,10 @@ class AlbumEventDataset(Dataset):
             self.data = json.load(f)
 
         self.album_ids = list(self.data.keys())
+        # print a sample of album_ids and their labels
+        print("Sample Album IDs and Labels:")
+        for album_id in list(self.album_ids)[:5]:
+            print(f"Album ID: {album_id}, Labels: {self.data[album_id]}")
         self.labels = list(self.data.values())
         self.image_root = image_root
         self.transform = transform
@@ -71,7 +75,3 @@ if __name__ == '__main__':
         transform=transform,
         max_images=32
     )
-
-    for i in range(len(dataset)):
-        album_tensor, labels = dataset[i]
-        print(f"Album ID: {dataset.album_ids[i]}, Labels: {dataset.label_binarizer.inverse_transform([labels.numpy()])[0]}")
