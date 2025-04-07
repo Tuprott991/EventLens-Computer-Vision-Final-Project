@@ -86,3 +86,36 @@ def load_model(model_path, backbone_name='swin_tiny_patch4_window7_224', num_cla
     model.eval()  # Set model to evaluation mode
     return model
 
+
+
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
+        """
+        alpha: trọng số cho class dương (positive class)
+        gamma: hệ số điều chỉnh độ khó của mẫu
+        reduction: 'mean', 'sum', hoặc 'none'
+        """
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        """
+        inputs: (B, C), đầu ra sigmoid của mô hình
+        targets: (B, C), nhãn nhị phân
+        """
+        eps = 1e-8  # để tránh log(0)
+        inputs = torch.clamp(inputs, eps, 1.0 - eps)  # tránh nan
+
+        BCE_loss = - (targets * torch.log(inputs) + (1 - targets) * torch.log(1 - inputs))
+        pt = torch.where(targets == 1, inputs, 1 - inputs)
+        focal_term = (1 - pt) ** self.gamma
+
+        loss = self.alpha * focal_term * BCE_loss
+
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        return loss

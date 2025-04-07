@@ -7,6 +7,7 @@ from torchvision import transforms
 from tqdm import tqdm
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from sklearn.metrics import average_precision_score
+from model_arch import FocalLoss
 
 def compute_mAP(outputs, labels):
     outputs = outputs.detach().cpu().numpy()
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-5)   
     num_epochs = 15
     scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
-    criterion = nn.BCELoss()
+    criterion = FocalLoss(alpha=0.25, gamma=2.0)
     
     best_val_map = -1
     best_val_loss = float('inf')
@@ -97,3 +98,5 @@ if __name__ == '__main__':
         
         scheduler.step()
         # torch.cuda.empty_cache()
+
+

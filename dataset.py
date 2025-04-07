@@ -27,13 +27,13 @@ class AlbumEventDataset(Dataset):
         self.encoded_labels = self.label_binarizer.transform(self.labels)
 
         # Print label frequencies before applying oversampling
-        self.print_label_frequencies()
+        # self.print_label_frequencies()
 
-        if self.oversampling:
-            self.encoded_labels, self.album_ids = self.apply_smote_multioutput(self.encoded_labels, self.album_ids)
+        # if self.oversampling:
+        #     self.encoded_labels, self.album_ids = self.apply_smote_multioutput(self.encoded_labels, self.album_ids)
 
         # Print label frequencies after applying oversampling
-        self.print_label_frequencies()
+        # self.print_label_frequencies()
 
     def __len__(self):
         return len(self.album_ids)
@@ -59,47 +59,6 @@ class AlbumEventDataset(Dataset):
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
 
-    def apply_smote_multioutput(self, encoded_labels, album_ids, target_count=2000):
-        encoded_labels = np.array(encoded_labels)
-        album_ids = np.array(album_ids)
-        num_labels = encoded_labels.shape[1]
-
-        smote_features = np.random.rand(len(encoded_labels), 10)  # Dummy feature vectors
-        X_resampled_list = []
-        album_ids_resampled_list = []
-
-        for i in range(num_labels):
-            y = encoded_labels[:, i]
-            current_count = np.sum(y)
-            if current_count < 6 or current_count >= target_count:
-                continue
-
-            sampling_strategy = min(1.0, target_count / current_count - 1e-6)
-            sm = SMOTE(sampling_strategy=sampling_strategy, random_state=42)
-
-            try:
-                X_res, y_res = sm.fit_resample(smote_features, y)
-            except ValueError:
-                continue
-
-            num_new = len(X_res) - len(smote_features)
-            if num_new <= 0:
-                continue
-
-            # Duplicate label rows & album_ids
-            new_labels = np.tile(encoded_labels[y == 1][0], (num_new, 1))
-            new_album_ids = np.random.choice(album_ids[y == 1], num_new)
-
-            X_resampled_list.append(new_labels)
-            album_ids_resampled_list.extend(new_album_ids)
-
-        if len(X_resampled_list) > 0:
-            new_labels_all = np.vstack(X_resampled_list)
-            new_album_ids_all = np.array(album_ids_resampled_list)
-            encoded_labels = np.vstack([encoded_labels, new_labels_all])
-            album_ids = np.concatenate([album_ids, new_album_ids_all])
-
-        return encoded_labels, album_ids
 
     def print_label_frequencies(self):
         """ Prints the frequency of each label in the dataset. """
