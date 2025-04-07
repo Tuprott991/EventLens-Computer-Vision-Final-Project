@@ -18,10 +18,13 @@ class AlbumEventClassifier(nn.Module):
 
         #  Auto-detect `embed_dim`
         self.embed_dim = self.backbone.num_features  
-        print(f"Using SwinV2 backbone: {backbone_name}, embed_dim: {self.embed_dim}")
+        print(f"Using Swin-Tiny backbone: {backbone_name}, embed_dim: {self.embed_dim}")
 
         #  Positional Encoding for image sequence
         self.pos_embedding = nn.Parameter(torch.randn(1, max_images, self.embed_dim))
+
+        # Add learnable CLS token, CLS = 'classification'
+        self.cls_token = nn.Parameter(torch.randn(1, 1, self.embed_dim))  # (1, 1, D) 
 
         # Aggregator module
         if aggregator == 'transformer':
@@ -56,13 +59,17 @@ class AlbumEventClassifier(nn.Module):
         album_imgs = album_imgs.view(B * N, C, H, W)
         feats = self.backbone(album_imgs)  # (B*N, D)
         feats = feats.view(B, N, self.embed_dim)  # (B, N, D)
+
+        # Prepare CLS token
+        cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, D)
+        feats = torch.cat((cls_tokens, feats), dim=1)  # (B, 1+N, D)
     
-        #  Add positional encoding
-        feats = feats + self.pos_embedding[:, :N, :]
+        # Add positional embedding 
+        feats = feats + self.pos_embedding[:, :feats.size(1), :] # (B, 1+N, D)
 
         if isinstance(self.aggregator, nn.TransformerEncoder):
             agg = self.aggregator(feats)
-            agg = agg.mean(dim=1)
+            agg = agg[:, 0]  # Take CLS token representation
         elif isinstance(self.aggregator, nn.LSTM):
             _, (h_n, _) = self.aggregator(feats)
             agg = h_n[-1]
