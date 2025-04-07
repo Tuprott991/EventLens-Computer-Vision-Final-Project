@@ -59,38 +59,34 @@ class AlbumEventDataset(Dataset):
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
 
-    def apply_smote_multioutput(self, encoded_labels, album_ids):
-        """
-        Apply SMOTE manually for each label column and get the union of resampled indices.
-        """
+    def apply_smote_multioutput(self, encoded_labels, album_ids, target_count=1200):
         encoded_labels = np.array(encoded_labels)
         album_ids = np.array(album_ids)
         num_labels = encoded_labels.shape[1]
-        
-        smote_features = np.random.rand(len(encoded_labels), 10)  # Random features as placeholder
-        all_resampled_indices = set(range(len(encoded_labels)))
 
+        smote_features = np.random.rand(len(encoded_labels), 10)  # Dummy feature vectors
         X_resampled_list = []
-        Y_resampled_list = []
         album_ids_resampled_list = []
 
         for i in range(num_labels):
             y = encoded_labels[:, i]
-            label_counts = Counter(y)
-            if label_counts[1] < 6:  # SMOTE requires at least 6 samples of the minority class
+            current_count = np.sum(y)
+            if current_count < 6 or current_count >= target_count:
                 continue
-            sm = SMOTE(random_state=42)
+
+            sampling_strategy = min(1.0, target_count / current_count - 1e-6)
+            sm = SMOTE(sampling_strategy=sampling_strategy, random_state=42)
+
             try:
                 X_res, y_res = sm.fit_resample(smote_features, y)
             except ValueError:
                 continue
 
-            # Find how many samples were added
             num_new = len(X_res) - len(smote_features)
             if num_new <= 0:
                 continue
 
-            # Duplicate the label and album_id rows to match new samples
+            # Duplicate label rows & album_ids
             new_labels = np.tile(encoded_labels[y == 1][0], (num_new, 1))
             new_album_ids = np.random.choice(album_ids[y == 1], num_new)
 
