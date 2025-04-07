@@ -7,7 +7,7 @@ from PIL import Image
 from sklearn.preprocessing import MultiLabelBinarizer
 import numpy as np
 from imblearn.over_sampling import SMOTE
-from sklearn.multioutput import MultiOutputClassifier
+from collections import Counter
 
 
 class AlbumEventDataset(Dataset):
@@ -60,14 +60,50 @@ class AlbumEventDataset(Dataset):
         return album_tensor, label
 
     def apply_smote_multioutput(self, encoded_labels, album_ids):
-        smote = SMOTE(sampling_strategy='auto', random_state=42)
-        smote_features = np.random.rand(len(encoded_labels), len(encoded_labels[0]))  # Tạo đặc trưng ngẫu nhiên
-
-        # Áp dụng SMOTE cho multilabel bằng MultiOutputClassifier
-        multi_output_model = MultiOutputClassifier(smote)
-        smote_labels_resampled, album_ids_resampled = multi_output_model.fit_resample(smote_features, encoded_labels)
+        """
+        Apply SMOTE manually for each label column and get the union of resampled indices.
+        """
+        encoded_labels = np.array(encoded_labels)
+        album_ids = np.array(album_ids)
+        num_labels = encoded_labels.shape[1]
         
-        return smote_labels_resampled, album_ids_resampled
+        smote_features = np.random.rand(len(encoded_labels), 10)  # Random features as placeholder
+        all_resampled_indices = set(range(len(encoded_labels)))
+
+        X_resampled_list = []
+        Y_resampled_list = []
+        album_ids_resampled_list = []
+
+        for i in range(num_labels):
+            y = encoded_labels[:, i]
+            label_counts = Counter(y)
+            if label_counts[1] < 6:  # SMOTE requires at least 6 samples of the minority class
+                continue
+            sm = SMOTE(random_state=42)
+            try:
+                X_res, y_res = sm.fit_resample(smote_features, y)
+            except ValueError:
+                continue
+
+            # Find how many samples were added
+            num_new = len(X_res) - len(smote_features)
+            if num_new <= 0:
+                continue
+
+            # Duplicate the label and album_id rows to match new samples
+            new_labels = np.tile(encoded_labels[y == 1][0], (num_new, 1))
+            new_album_ids = np.random.choice(album_ids[y == 1], num_new)
+
+            X_resampled_list.append(new_labels)
+            album_ids_resampled_list.extend(new_album_ids)
+
+        if len(X_resampled_list) > 0:
+            new_labels_all = np.vstack(X_resampled_list)
+            new_album_ids_all = np.array(album_ids_resampled_list)
+            encoded_labels = np.vstack([encoded_labels, new_labels_all])
+            album_ids = np.concatenate([album_ids, new_album_ids_all])
+
+        return encoded_labels, album_ids
 
     def print_label_frequencies(self):
         """ Prints the frequency of each label in the dataset. """
