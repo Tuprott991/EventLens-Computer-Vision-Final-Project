@@ -5,8 +5,9 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
 from sklearn.preprocessing import MultiLabelBinarizer
-from imblearn.over_sampling import SMOTE
 import numpy as np
+from collections import Counter
+
 
 class AlbumEventDataset(Dataset):
     def __init__(self, json_path, image_root, transform=None, max_images=10, oversampling=False):
@@ -20,32 +21,18 @@ class AlbumEventDataset(Dataset):
         self.max_images = max_images
         self.oversampling = oversampling
 
-        # Biến đổi nhãn
         self.label_binarizer = MultiLabelBinarizer()
         self.label_binarizer.fit(self.labels)
         self.encoded_labels = self.label_binarizer.transform(self.labels)
 
-        # Nếu cần áp dụng SMOTE
+        # Print label frequencies before applying oversampling
+        self.print_label_frequencies()
+
         if self.oversampling:
-            print("Applying SMOTE...")
-            self.encoded_labels, self.album_ids = self.apply_smote(self.encoded_labels, self.album_ids)
+            self.encoded_labels, self.album_ids = self.apply_random_oversampling(self.encoded_labels, self.album_ids)
 
-        # In tần suất nhãn
-        label_counts = {label: 0 for label in self.label_binarizer.classes_}
-        for encoded_label in self.encoded_labels:
-            for i, count in enumerate(encoded_label):
-                if count > 0:
-                    label_counts[self.label_binarizer.classes_[i]] += 1
-        print("\nLabel Frequencies:")
-        for label, count in label_counts.items():
-            print(f"Label: {label}, Frequency: {count}")
-
-    def apply_smote(self, encoded_labels, album_ids):
-        smote = SMOTE(sampling_strategy='auto', random_state=42)
-        # SMOTE yêu cầu các đặc trưng và nhãn dưới dạng mảng 2D
-        smote_features = np.random.rand(len(encoded_labels), len(encoded_labels[0]))  # Tạo đặc trưng giả
-        smote_labels_resampled, album_ids_resampled = smote.fit_resample(smote_features, encoded_labels)
-        return smote_labels_resampled, album_ids_resampled
+        # Print label frequencies after applying oversampling
+        self.print_label_frequencies()
 
     def __len__(self):
         return len(self.album_ids)
@@ -71,17 +58,41 @@ class AlbumEventDataset(Dataset):
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
 
-# Các hàm hỗ trợ khác
-def load_labels(label_path):
-    with open(label_path, 'r') as f:
-        labels = json.load(f)
-    return labels
+    def apply_random_oversampling(self, encoded_labels, album_ids):
+        """
+        Applies random oversampling to balance the dataset by duplicating labels.
+        """
+        label_counts = Counter(map(tuple, encoded_labels))  # Count occurrences of each label
+        max_count = max(label_counts.values())  # Get the maximum count of any label
 
-def prepare_dataset(json_path, image_root, transform=None, max_images=30, oversampling=False):
-    dataset = AlbumEventDataset(json_path=json_path, image_root=image_root, transform=transform, max_images=max_images, oversampling=oversampling)
-    return dataset
+        resampled_labels = []
+        resampled_album_ids = []
 
-# Test in ra tên album và nhãn của album
+        for idx, label in enumerate(encoded_labels):
+            resampled_labels.append(label)
+            resampled_album_ids.append(album_ids[idx])
+
+            # Add duplicate samples for underrepresented labels
+            while label_counts[tuple(label)] < max_count:
+                resampled_labels.append(label)
+                resampled_album_ids.append(album_ids[idx])
+                label_counts[tuple(label)] += 1
+
+        return np.array(resampled_labels), np.array(resampled_album_ids)
+
+    def print_label_frequencies(self):
+        """ Prints the frequency of each label in the dataset. """
+        label_counts = {label: 0 for label in self.label_binarizer.classes_}
+        for encoded_label in self.encoded_labels:
+            for i, count in enumerate(encoded_label):
+                if count > 0:
+                    label_counts[self.label_binarizer.classes_[i]] += 1
+        print("\nLabel Frequencies:")
+        for label, count in label_counts.items():
+            print(f"Label: {label}, Frequency: {count}")
+
+
+# Testing the dataset with oversampling enabled
 if __name__ == '__main__':
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -89,11 +100,10 @@ if __name__ == '__main__':
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    # Khởi tạo dataset với oversampling=True
     dataset = AlbumEventDataset(
         json_path='dataset/CUFED/event_type.json',
         image_root='dataset/CUFED/images',
         transform=transform,
         max_images=32,
-        oversampling=True  # Kích hoạt SMOTE
+        oversampling=True  # Enable random oversampling
     )
