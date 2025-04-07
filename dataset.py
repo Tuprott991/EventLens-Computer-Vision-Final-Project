@@ -5,38 +5,32 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from PIL import Image
 from sklearn.preprocessing import MultiLabelBinarizer
-
+from imblearn.over_sampling import SMOTE
+import numpy as np
 
 class AlbumEventDataset(Dataset):
-    def __init__(self, json_path, image_root, transform=None, max_images=10):
+    def __init__(self, json_path, image_root, transform=None, max_images=10, oversampling=False):
         with open(json_path, 'r') as f:
             self.data = json.load(f)
 
         self.album_ids = list(self.data.keys())
-        
         self.labels = list(self.data.values())
         self.image_root = image_root
         self.transform = transform
         self.max_images = max_images
+        self.oversampling = oversampling
 
+        # Biến đổi nhãn
         self.label_binarizer = MultiLabelBinarizer()
         self.label_binarizer.fit(self.labels)
         self.encoded_labels = self.label_binarizer.transform(self.labels)
 
-        # # Print all labels and their corresponding indices
-        # print("All Labels and their Indices:")
-        # for idx, label in enumerate(self.label_binarizer.classes_):
-        #     print(f"Index: {idx}, Label: {label}")
+        # Nếu cần áp dụng SMOTE
+        if self.oversampling:
+            print("Applying SMOTE...")
+            self.encoded_labels, self.album_ids = self.apply_smote(self.encoded_labels, self.album_ids)
 
-        # # print a sample of album_ids and their labels in both raw and encoded form
-        # print("\nSample of Album IDs and their Labels:")
-        # for i in range(min(5, len(self.album_ids))):
-        #     album_id = self.album_ids[i]
-        #     raw_label = self.labels[i]
-        #     encoded_label = self.encoded_labels[i]
-        #     print(f"Album ID: {album_id}, Raw Label: {raw_label}, Encoded Label: {encoded_label}")
-
-        # Print the frequency of each label in the dataset
+        # In tần suất nhãn
         label_counts = {label: 0 for label in self.label_binarizer.classes_}
         for encoded_label in self.encoded_labels:
             for i, count in enumerate(encoded_label):
@@ -45,7 +39,13 @@ class AlbumEventDataset(Dataset):
         print("\nLabel Frequencies:")
         for label, count in label_counts.items():
             print(f"Label: {label}, Frequency: {count}")
-        
+
+    def apply_smote(self, encoded_labels, album_ids):
+        smote = SMOTE(sampling_strategy='auto', random_state=42)
+        # SMOTE yêu cầu các đặc trưng và nhãn dưới dạng mảng 2D
+        smote_features = np.random.rand(len(encoded_labels), len(encoded_labels[0]))  # Tạo đặc trưng giả
+        smote_labels_resampled, album_ids_resampled = smote.fit_resample(smote_features, encoded_labels)
+        return smote_labels_resampled, album_ids_resampled
 
     def __len__(self):
         return len(self.album_ids)
@@ -70,19 +70,18 @@ class AlbumEventDataset(Dataset):
 
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
-    
 
+# Các hàm hỗ trợ khác
 def load_labels(label_path):
     with open(label_path, 'r') as f:
         labels = json.load(f)
     return labels
 
-def prepare_dataset(json_path, image_root, transform=None, max_images=30):
-    dataset = AlbumEventDataset(json_path=json_path, image_root=image_root, transform=transform, max_images=max_images)
+def prepare_dataset(json_path, image_root, transform=None, max_images=30, oversampling=False):
+    dataset = AlbumEventDataset(json_path=json_path, image_root=image_root, transform=transform, max_images=max_images, oversampling=oversampling)
     return dataset
 
-# Test print the name of album and its labels as raw name
-
+# Test in ra tên album và nhãn của album
 if __name__ == '__main__':
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -90,9 +89,11 @@ if __name__ == '__main__':
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
+    # Khởi tạo dataset với oversampling=True
     dataset = AlbumEventDataset(
         json_path='dataset/CUFED/event_type.json',
         image_root='dataset/CUFED/images',
         transform=transform,
-        max_images=32
+        max_images=32,
+        oversampling=True  # Kích hoạt SMOTE
     )
