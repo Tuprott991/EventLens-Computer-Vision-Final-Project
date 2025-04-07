@@ -23,8 +23,8 @@ if __name__ == '__main__':
     
     # Import to Kaggle and input dataset
     dataset = AlbumEventDataset(
-        json_path='CUFED/event_type.json',
-        image_root='CUFED/images',
+        json_path='dataset/CUFED/event_type.json',
+        image_root='dataset/CUFED/images',
         transform=transform,
         max_images=32
     )
