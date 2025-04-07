@@ -43,10 +43,8 @@ if __name__ == '__main__':
             
             # Convert outputs to probabilities and labels to text
             predicted_probs = outputs.cpu().numpy()[0]
-            predicted_label = dataset.label_binarizer.inverse_transform([predicted_probs])[0]
-            true_label = dataset.label_binarizer.inverse_transform([labels.cpu().numpy()[0]])[0]
             
             # Print album name, predicted label, and true label
-            print(f"Predicted Label: {predicted_label}")
-            print(f"True Label: {true_label}")
+            print(f"Predicted probs: {predicted_probs}")
+            print(f"True Label: {labels}")
             break  # Only process the first album
