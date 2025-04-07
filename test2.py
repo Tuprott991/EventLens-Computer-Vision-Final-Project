@@ -42,7 +42,7 @@ if __name__ == '__main__':
             outputs = model(album_imgs)
             
             # Convert outputs to probabilities and labels to text
-            predicted_probs = outputs.cpu().numpy()[0]
+            predicted_probs = outputs.cpu().numpy() 
             
             # Print album name, predicted label, and true label
             print(f"Predicted probs: {predicted_probs}")

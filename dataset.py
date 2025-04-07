@@ -36,6 +36,17 @@ class AlbumEventDataset(Dataset):
         #     encoded_label = self.encoded_labels[i]
         #     print(f"Album ID: {album_id}, Raw Label: {raw_label}, Encoded Label: {encoded_label}")
 
+        # Print the frequency of each label in the dataset
+        label_counts = {label: 0 for label in self.label_binarizer.classes_}
+        for encoded_label in self.encoded_labels:
+            for i, count in enumerate(encoded_label):
+                if count > 0:
+                    label_counts[self.label_binarizer.classes_[i]] += 1
+        print("\nLabel Frequencies:")
+        for label, count in label_counts.items():
+            print(f"Label: {label}, Frequency: {count}")
+        
+
     def __len__(self):
         return len(self.album_ids)
 
