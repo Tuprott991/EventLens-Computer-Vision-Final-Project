@@ -55,3 +55,23 @@ def load_labels(label_path):
 def prepare_dataset(json_path, image_root, transform=None, max_images=30):
     dataset = AlbumEventDataset(json_path=json_path, image_root=image_root, transform=transform, max_images=max_images)
     return dataset
+
+# Test print the name of album and its labels as raw name
+
+if __name__ == '__main__':
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    dataset = AlbumEventDataset(
+        json_path='dataset/CUFED/event_type.json',
+        image_root='dataset/CUFED/images',
+        transform=transform,
+        max_images=32
+    )
+
+    for i in range(len(dataset)):
+        album_tensor, labels = dataset[i]
+        print(f"Album ID: {dataset.album_ids[i]}, Labels: {dataset.label_binarizer.inverse_transform([labels.numpy()])[0]}")
