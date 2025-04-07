@@ -23,18 +23,18 @@ class AlbumEventDataset(Dataset):
         self.label_binarizer.fit(self.labels)
         self.encoded_labels = self.label_binarizer.transform(self.labels)
 
-        # Print all labels and their corresponding indices
-        print("All Labels and their Indices:")
-        for idx, label in enumerate(self.label_binarizer.classes_):
-            print(f"Index: {idx}, Label: {label}")
+        # # Print all labels and their corresponding indices
+        # print("All Labels and their Indices:")
+        # for idx, label in enumerate(self.label_binarizer.classes_):
+        #     print(f"Index: {idx}, Label: {label}")
 
-        # print a sample of album_ids and their labels in both raw and encoded form
-        print("\nSample of Album IDs and their Labels:")
-        for i in range(min(5, len(self.album_ids))):
-            album_id = self.album_ids[i]
-            raw_label = self.labels[i]
-            encoded_label = self.encoded_labels[i]
-            print(f"Album ID: {album_id}, Raw Label: {raw_label}, Encoded Label: {encoded_label}")
+        # # print a sample of album_ids and their labels in both raw and encoded form
+        # print("\nSample of Album IDs and their Labels:")
+        # for i in range(min(5, len(self.album_ids))):
+        #     album_id = self.album_ids[i]
+        #     raw_label = self.labels[i]
+        #     encoded_label = self.encoded_labels[i]
+        #     print(f"Album ID: {album_id}, Raw Label: {raw_label}, Encoded Label: {encoded_label}")
 
     def __len__(self):
         return len(self.album_ids)
