@@ -4,7 +4,7 @@ import timm
 
 class AlbumEventClassifier(nn.Module):
     def __init__(self, 
-                 backbone_name='swin_tiny_patch4_window7_224',  #  Swin as backbone
+                 backbone_name='swinv2-base-patch4-window8-256',  #  Swin as backbone
                  pretrained=True,
                  num_classes=23,
                  aggregator='transformer',
@@ -46,12 +46,12 @@ class AlbumEventClassifier(nn.Module):
             nn.LayerNorm(self.embed_dim),
             nn.Linear(self.embed_dim, self.embed_dim),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.3),
+            nn.Dropout(0.2),
             nn.Linear(self.embed_dim, num_classes)
         )
 
         #  Multi-label activation
-        self.activation = nn.Sigmoid()
+        # self.activation = nn.Sigmoid()
 
     def forward(self, album_imgs):
         # album_imgs: (B, N, C, H, W)
@@ -61,11 +61,11 @@ class AlbumEventClassifier(nn.Module):
         feats = feats.view(B, N, self.embed_dim)  # (B, N, D)
 
         # Add positional embedding
-        feats = feats + self.pos_embedding[:, :feats.size(1), :]  # (B, N, D)
-
-        # Prepare CLS token
         cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, D)
-        feats = torch.cat((cls_tokens, feats), dim=1)
+        feats = torch.cat((cls_tokens, feats), dim=1)  # (B, N+1, D)
+
+        # Add positional embedding
+        feats = feats + self.pos_embedding[:, :feats.size(1), :]  # (B, N+1, D)
 
         if isinstance(self.aggregator, nn.TransformerEncoder):
             agg = self.aggregator(feats)
@@ -77,7 +77,7 @@ class AlbumEventClassifier(nn.Module):
             agg = feats.mean(dim=1)
 
         out = self.classifier(agg)
-        return self.activation(out)
+        return out
 
 
 def load_model(model_path, backbone_name='swin_tiny_patch4_window7_224', num_classes=23, aggregator='transformer', max_images=32):
