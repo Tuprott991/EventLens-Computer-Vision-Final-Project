@@ -21,7 +21,8 @@ class AlbumEventClassifier(nn.Module):
         print(f"Using Swin-Tiny backbone: {backbone_name}, embed_dim: {self.embed_dim}")
 
         #  Positional Encoding for image sequence
-        self.pos_embedding = nn.Parameter(torch.randn(1, max_images, self.embed_dim))
+        # Update positional embedding initialization
+        self.pos_embedding = nn.Parameter(torch.randn(1, max_images + 1, self.embed_dim))
 
         # Add learnable CLS token, CLS = 'classification'
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.embed_dim))  # (1, 1, D) 
