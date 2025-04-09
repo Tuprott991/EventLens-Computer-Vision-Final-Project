@@ -74,7 +74,7 @@ if __name__ == '__main__':
         # Freeze params for the first 5 epochs
         if epoch == 0:
             freeze_swin_params(model)
-        elif epoch == 5:
+        elif epoch == 7:
             unfreeze_swin_params(model)
 
         model.train()
