@@ -33,6 +33,8 @@ if __name__ == '__main__':
     # Load the trained model weights
     model.load_state_dict(torch.load('best_model.pth'))
     model.eval()
+
+    
     
     # Print true labels (y_true)
     print("Printing true labels (y_true):")
@@ -40,3 +42,4 @@ if __name__ == '__main__':
         for album_imgs, labels in val_loader:
             labels = labels.cpu().numpy()  # Convert to numpy for easier inspection
             print(labels)
+            

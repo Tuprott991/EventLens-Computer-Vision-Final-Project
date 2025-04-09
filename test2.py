@@ -47,4 +47,8 @@ if __name__ == '__main__':
             # Print album name, predicted label, and true label
             print(f"Predicted probs: {predicted_probs}")
             print(f"True Label: {labels}")
+
+            # Print shape of the output and labels
+            print(f"Output shape: {predicted_probs.shape}")
+            print(f"Labels shape: {labels.shape}")
             break  # Only process the first album
