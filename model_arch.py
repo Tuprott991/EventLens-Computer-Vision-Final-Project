@@ -4,7 +4,7 @@ import timm
 
 class AlbumEventClassifier(nn.Module):
     def __init__(self, 
-                 backbone_name='swinv2-base-patch4-window8-256',  #  Swin as backbone
+                 backbone_name='swinv2_base_window8_256',  #  Swin as backbone
                  pretrained=True,
                  num_classes=23,
                  aggregator='transformer',

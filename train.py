@@ -72,9 +72,9 @@ if __name__ == '__main__':
     
     for epoch in range(num_epochs):
         # Freeze params for the first 5 epochs
-        if epoch < 5:
+        if epoch == 0:
             freeze_swin_params(model)
-        else:
+        elif epoch == 5:
             unfreeze_swin_params(model)
 
         model.train()
