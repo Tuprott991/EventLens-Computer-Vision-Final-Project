@@ -42,14 +42,14 @@ if __name__ == '__main__':
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
     
     # initialize the model
     model = AlbumEventClassifier(num_classes=len(dataset.label_binarizer.classes_), aggregator='transformer', max_images=32).cuda()
 
     # Training settings
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)   
+    optimizer = torch.optim.AdamW(model.parameters(), lr=8e-5, weight_decay=1e-5)   
     num_epochs = 36
     scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
 
@@ -72,10 +72,10 @@ if __name__ == '__main__':
     
     for epoch in range(num_epochs):
         # Freeze params for the first 5 epochs
-        # if epoch == 0:
-        #     freeze_swin_params(model)
-        # elif epoch == 7:
-        #     unfreeze_swin_params(model)
+        if epoch == 0:
+            freeze_swin_params(model)
+        elif epoch == 7:
+            unfreeze_swin_params(model)
 
         model.train()
         epoch_loss = 0.0
