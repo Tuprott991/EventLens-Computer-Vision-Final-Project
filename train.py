@@ -49,7 +49,7 @@ if __name__ == '__main__':
     model = AlbumEventClassifier(num_classes=len(dataset.label_binarizer.classes_), aggregator='transformer', max_images=32).cuda()
 
     # Training settings
-    optimizer = torch.optim.AdamW(model.parameters(), lr=8e-5, weight_decay=1e-5)   
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)   
     num_epochs = 36
     scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
 
@@ -102,20 +102,20 @@ if __name__ == '__main__':
                 album_imgs, labels = album_imgs.cuda(), labels.cuda()
                 outputs = model(album_imgs)
                 val_loss += criterion(outputs, labels).item()
-                val_mAP += compute_mAP(outputs, labels)
+                # val_mAP += compute_mAP(outputs, labels)
         
         val_loss /= len(val_loader)
-        val_mAP /= len(val_loader)
+        # val_mAP /= len(val_loader)
         print(f"✅ Epoch {epoch+1}/{num_epochs} | Train Loss: {epoch_loss/len(train_loader):.4f} | Val Loss: {val_loss:.4f} | Val mAP: {val_mAP:.4f}\n")
         
-        if val_mAP > best_val_map:
-            best_val_map = val_mAP
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             torch.save(model.state_dict(), 'best_model.pth')
-            print("🔥 Saved model with best mAP!")
+            print("🔥 Saved model with best val_loss !")
             wait = 0
         else:
             wait += 1
-            print(f"⏳ No improvement in mAP for {wait} epoch(s)")
+            print(f"⏳ No improvement in val_loss for {wait} epoch(s)")
 
         if wait >= patience:
             print("⛔ Early stopping due to no improvement in val_mAP.")
