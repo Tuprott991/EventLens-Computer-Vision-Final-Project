@@ -1,10 +1,11 @@
 import torch
 import torch.nn as nn
 import timm
+from transformers import SwinModel, AutoModel, AutoConfig, SwinConfig
 
 class AlbumEventClassifier(nn.Module):
     def __init__(self, 
-                 backbone_name='swinv2_base_window8_256',  #  Swin as backbone
+                 backbone_name='microsoft/swinv2-base-patch4-window8-256',  #  Swin as backbone
                  pretrained=True,
                  num_classes=23,
                  aggregator='transformer',
@@ -13,12 +14,12 @@ class AlbumEventClassifier(nn.Module):
 
         self.max_images = max_images
 
-        #  Load Swin backbone
-        self.backbone = timm.create_model(backbone_name, pretrained=pretrained, num_classes=0)
+        swin_config = SwinConfig.from_pretrained(backbone_name) if pretrained else SwinConfig()
+        self.backbone = SwinModel.from_pretrained(backbone_name, config=swin_config) if pretrained else SwinModel(swin_config)
 
         #  Auto-detect `embed_dim`
         self.embed_dim = self.backbone.num_features  
-        print(f"Using Swin-Tiny backbone: {backbone_name}, embed_dim: {self.embed_dim}")
+        print(f"Using Swin backbone: {backbone_name}, embed_dim: {self.embed_dim}")
 
         #  Positional Encoding for image sequence
         # Update positional embedding initialization
@@ -51,6 +52,9 @@ class AlbumEventClassifier(nn.Module):
             nn.Linear(self.embed_dim, num_classes)
         )
 
+        # Importance weight head
+        self.importance_head = nn.Linear(self.embed_dim, 1)  # Output a single weight per image
+
         #  Multi-label activation
         # self.activation = nn.Sigmoid()
 
@@ -58,16 +62,20 @@ class AlbumEventClassifier(nn.Module):
         # album_imgs: (B, N, C, H, W)
         B, N, C, H, W = album_imgs.size()
         album_imgs = album_imgs.view(B * N, C, H, W)
-        feats = self.backbone(album_imgs)  # (B*N, D)
-        feats = feats.view(B, N, self.embed_dim)  # (B, N, D)
 
-        # Add positional embedding
+        swin_output = self.backbone(pixel_values=album_imgs)
+        feats = swin_output.last_hidden_state  # (B*N, num_patches, D)
+
+        # Reshape to (B, N, D)
+        feats = feats.view(B, N, self.embed_dim) # (B, N, D)
+
+        # Add CLS token
         cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, D)
         feats = torch.cat((cls_tokens, feats), dim=1)  # (B, N+1, D)
 
-        # Add positional embedding
-        feats = feats + self.pos_embedding[:, :feats.size(1), :]  # (B, N+1, D)
-
+        # Calculate importance weights
+        importance_weights = self.importance_head(feats[:, 1:, :]).squeeze(-1)  # (B, N)
+    
         if isinstance(self.aggregator, nn.TransformerEncoder):
             agg = self.aggregator(feats)
             agg = agg[:, 0]  # Take CLS token representation
@@ -78,10 +86,12 @@ class AlbumEventClassifier(nn.Module):
             agg = feats.mean(dim=1)
 
         out = self.classifier(agg)
-        return out
+        return out, importance_weights
 
 
 def load_model(model_path, backbone_name='swin_tiny_patch4_window7_224', num_classes=23, aggregator='transformer', max_images=32):
+
+
     model = AlbumEventClassifier(backbone_name=backbone_name, num_classes=num_classes, aggregator=aggregator, max_images=max_images)
     model.load_state_dict(torch.load(model_path))
     model.eval()  # Set model to evaluation mode

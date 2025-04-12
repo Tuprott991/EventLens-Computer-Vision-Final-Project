@@ -49,7 +49,7 @@ if __name__ == '__main__':
     model = AlbumEventClassifier(num_classes=len(dataset.label_binarizer.classes_), aggregator='transformer', max_images=32).cuda()
 
     # Training settings
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)   
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5, weight_decay=1e-5)   
     num_epochs = 36
     scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
         with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}") as tepoch:
             for album_imgs, labels in tepoch:
                 album_imgs, labels = album_imgs.cuda(), labels.cuda()
-                outputs = model(album_imgs)
+                outputs, _ = model(album_imgs)
                 loss = criterion(outputs, labels)
                 
                 optimizer.zero_grad() # Xóa gradient cũ
@@ -100,7 +100,7 @@ if __name__ == '__main__':
         with torch.no_grad():
             for album_imgs, labels in val_loader:
                 album_imgs, labels = album_imgs.cuda(), labels.cuda()
-                outputs = model(album_imgs)
+                outputs, _ = model(album_imgs)
                 val_loss += criterion(outputs, labels).item()
                 # val_mAP += compute_mAP(outputs, labels)
         
