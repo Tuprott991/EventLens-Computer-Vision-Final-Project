@@ -66,15 +66,16 @@ class AlbumEventClassifier(nn.Module):
         swin_output = self.backbone(pixel_values=album_imgs)
         feats = swin_output.last_hidden_state  # (B*N, num_patches, D)
 
-        # Aggregate over patches (mean pooling)
-        feats = feats.mean(dim=1)  # (B*N, D)
+        # Reshape to (B, N, num_patches, D)
+        num_patches = feats.size(1)
+        feats = feats.view(B, N, num_patches, self.embed_dim)  # (B, N, num_patches, D)
 
-        # Reshape to (B, N, D)
-        feats = feats.view(B, N, self.embed_dim) # (B, N, D)
+        # Flatten patches for Aggregator
+        feats = feats.view(B, N * num_patches, self.embed_dim)  # (B, N*num_patches, D)
 
         # Add CLS token
         cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, D)
-        feats = torch.cat((cls_tokens, feats), dim=1)  # (B, N+1, D)
+        feats = torch.cat((cls_tokens, feats), dim=1)  # (B, 1 + N*num_patches, D)
 
         # Calculate importance weights
         importance_weights = self.importance_head(feats[:, 1:, :]).squeeze(-1)  # (B, N)
