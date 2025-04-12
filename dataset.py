@@ -6,7 +6,6 @@ from torchvision import transforms
 from PIL import Image
 from sklearn.preprocessing import MultiLabelBinarizer
 import numpy as np
-from imblearn.over_sampling import SMOTE
 from collections import Counter
 
 
