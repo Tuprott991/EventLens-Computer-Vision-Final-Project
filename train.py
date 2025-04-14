@@ -66,6 +66,7 @@ model = model.to(DEVICE)
 # Load pretrained weights if available
 if os.path.exists('checkpoints/best_model_epoch5_val0.5863.pth'):
     model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+    print("Pretrained weights loaded.")
 else:
     print("No pretrained weights found. Training from scratch.")
 
@@ -127,10 +128,10 @@ def evaluate(model, dataloader):
 for epoch in range(EPOCHS):
     print(f"\nEpoch {epoch+1}/{EPOCHS}")
 
-    if epoch < FREEZE_EPOCHS:
-        freeze_backbone(model, freeze=True)
-    else:
-        freeze_backbone(model, freeze=False)
+    # if epoch < FREEZE_EPOCHS:
+    #     freeze_backbone(model, freeze=True)
+    # else:
+    #     freeze_backbone(model, freeze=False)
 
     model.train()
     train_loss = 0
