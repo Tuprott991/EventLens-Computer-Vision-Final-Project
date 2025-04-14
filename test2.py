@@ -1,4 +1,4 @@
-from model_arch import AlbumEventClassifier
+from old_model_arch import AlbumEventClassifier
 from dataset import AlbumEventDataset
 import torch
 from torch.utils.data import DataLoader

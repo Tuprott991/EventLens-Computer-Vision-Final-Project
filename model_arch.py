@@ -1,136 +1,209 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+from torchvision import models
 import timm
-from transformers import SwinModel, AutoModel, AutoConfig, SwinConfig
 
-class AlbumEventClassifier(nn.Module):
-    def __init__(self, 
-                 backbone_name='microsoft/swinv2-base-patch4-window8-256',  #  Swin as backbone
-                 pretrained=True,
-                 num_classes=23,
-                 aggregator='transformer',
-                 max_images=32):
+# --- Transformer Encoder Layer with Attention Extraction ---
+class TransformerEncoderLayerWithAttn(nn.Module):
+    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1):
         super().__init__()
+        # Multi-head self-attention
+        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
+        # Feedforward network
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
+        self.dropout = nn.Dropout(dropout)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
+        # Layer norms and dropout
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
 
-        self.max_images = max_images
+    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+        # src shape: (seq_len, batch, d_model)
+        attn_output, attn_weights = self.self_attn(
+            src, src, src,
+            attn_mask=src_mask,
+            key_padding_mask=src_key_padding_mask,
+            need_weights=True,
+            average_attn_weights=False
+        )
+        # Residual + norm
+        src2 = attn_output
+        src = src + self.dropout1(src2)
+        src = self.norm1(src)
+        # Feedforward
+        src2 = self.linear2(self.dropout(F.relu(self.linear1(src))))
+        src = src + self.dropout2(src2)
+        src = self.norm2(src)
+        return src, attn_weights
 
-        swin_config = SwinConfig.from_pretrained(backbone_name) if pretrained else SwinConfig()
-        self.backbone = SwinModel.from_pretrained(backbone_name, config=swin_config) if pretrained else SwinModel(swin_config)
+# --- Transformer Encoder Stack that returns all attentions ---
+class TransformerEncoderWithAttn(nn.Module):
+    def __init__(self, encoder_layer, num_layers):
+        super().__init__()
+        self.layers = nn.ModuleList([encoder_layer for _ in range(num_layers)])
 
-        #  Auto-detect `embed_dim`
-        self.embed_dim = self.backbone.num_features  
-        print(f"Using Swin backbone: {backbone_name}, embed_dim: {self.embed_dim}")
-
-        #  Positional Encoding for image sequence
-        # Update positional embedding initialization
-        self.pos_embedding = nn.Parameter(torch.randn(1, max_images + 1, self.embed_dim))
-
-        # Add learnable CLS token, CLS = 'classification'
-        self.cls_token = nn.Parameter(torch.randn(1, 1, self.embed_dim))  # (1, 1, D) 
-
-        # Aggregator module
-        if aggregator == 'transformer':
-            encoder_layer = nn.TransformerEncoderLayer(
-                d_model=self.embed_dim,  # ✅ Match SwinV2 embed_dim
-                nhead=8 if self.embed_dim % 8 == 0 else 16,  # Ensure divisibility
-                batch_first=True
+    def forward(self, src, mask=None, src_key_padding_mask=None):
+        attentions = []
+        output = src
+        for layer in self.layers:
+            output, attn_weights = layer(
+                output,
+                src_mask=mask,
+                src_key_padding_mask=src_key_padding_mask
             )
-            self.aggregator = nn.TransformerEncoder(encoder_layer, num_layers=2)
-        elif aggregator == 'lstm':
-            self.aggregator = nn.LSTM(self.embed_dim, self.embed_dim, batch_first=True, bidirectional=False)
-        elif aggregator == 'mean':
-            self.aggregator = None
-        else:
-            raise ValueError("Invalid aggregator")
+            attentions.append(attn_weights)
+        return output, attentions
 
-        # ✅ Classifier with regularization
-        self.classifier = nn.Sequential(
-            nn.LayerNorm(self.embed_dim),
-            nn.Linear(self.embed_dim, self.embed_dim),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.2),
-            nn.Linear(self.embed_dim, num_classes)
+# --- EventLens: Multi-Label Album Event Classification ---
+class EventLens(nn.Module):
+    def __init__(
+        self,
+        num_labels,
+        d_model=512,
+        nhead=8,
+        num_layers=3,
+        max_images=20,
+        backbone_name = 'convnext_base',
+        pretrained_backbone=True
+    ):
+        super().__init__()
+        # 1) Image feature extractor (ResNet50 backbone)\
+        # Use ResNet50 as the backbone for image feature extraction
+
+        # backbone = models.resnet50(pretrained=pretrained_backbone)
+
+        # Use Timm for Swin or other backbones if needed
+
+        # backbone = timm.create_model('swin_base_patch4_window7_224', pretrained=pretrained_backbone)
+
+        
+        # 1) Image feature extractor (ConvNeXt backbone)
+        self.backbone = timm.create_model(
+            backbone_name,
+            pretrained=pretrained_backbone,
+            num_classes=0,      # remove classification head
+            global_pool=''      # disable default pooling
         )
 
-        # Importance weight head
-        self.importance_head = nn.Linear(self.embed_dim, 1)  # Output a single weight per image
+        # remove the classification head
+        
+        # self.backbone = nn.Sequential(*modules)
+        # project to transformer dimension
+        # self.proj = nn.Linear(backbone.fc.in_features, d_model)
 
-        #  Multi-label activation
-        # self.activation = nn.Sigmoid()
-
-    def forward(self, album_imgs):
-        # album_imgs: (B, N, C, H, W)
-        B, N, C, H, W = album_imgs.size()
-        album_imgs = album_imgs.view(B * N, C, H, W)
-
-        swin_output = self.backbone(pixel_values=album_imgs)
-        feats = swin_output.last_hidden_state  # (B*N, num_patches, D)
-
-        # Reshape to (B, N, num_patches, D)
-        num_patches = feats.size(1)
-        feats = feats.view(B, N, num_patches, self.embed_dim)  # (B, N, num_patches, D)
-
-        # Flatten patches for Aggregator
-        feats = feats.view(B, N * num_patches, self.embed_dim)  # (B, N*num_patches, D)
-
-        # Add CLS token
-        cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, D)
-        feats = torch.cat((cls_tokens, feats), dim=1)  # (B, 1 + N*num_patches, D)
-
-        # Calculate importance weights
-        importance_weights = self.importance_head(feats[:, 1:, :]).squeeze(-1)  # (B, N)
-    
-        if isinstance(self.aggregator, nn.TransformerEncoder):
-            agg = self.aggregator(feats)
-            agg = agg[:, 0]  # Take CLS token representation
-        elif isinstance(self.aggregator, nn.LSTM):
-            _, (h_n, _) = self.aggregator(feats)
-            agg = h_n[-1]
-        else:
-            agg = feats.mean(dim=1)
-
-        out = self.classifier(agg)
-        return out, importance_weights
+        feat_dim = self.backbone.num_features
+        self.proj = nn.Linear(feat_dim, d_model)
 
 
-def load_model(model_path, backbone_name='swin_tiny_patch4_window7_224', num_classes=23, aggregator='transformer', max_images=32):
+        # 2) Learnable CLS token & positional embeddings for album
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        self.pos_embed = nn.Parameter(torch.zeros(1, max_images + 1, d_model))
 
+        # 3) Transformer Encoder
+        encoder_layer = TransformerEncoderLayerWithAttn(d_model, nhead)
+        self.transformer_encoder = TransformerEncoderWithAttn(encoder_layer, num_layers)
 
-    model = AlbumEventClassifier(backbone_name=backbone_name, num_classes=num_classes, aggregator=aggregator, max_images=max_images)
-    model.load_state_dict(torch.load(model_path))
-    model.eval()  # Set model to evaluation mode
-    return model
+        # 4) Classification head (multi-label)
+        self.norm = nn.LayerNorm(d_model)
+        self.classifier = nn.Linear(d_model, num_labels)
 
+        # Initialize embeddings
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        nn.init.trunc_normal_(self.cls_token, std=0.02)
 
-
-class FocalLoss(nn.Module):
-    def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
+    def forward(self, images, mask=None):
         """
-        alpha: trọng số cho class dương (positive class)
-        gamma: hệ số điều chỉnh độ khó của mẫu
-        reduction: 'mean', 'sum', hoặc 'none'
+        Args:
+            images: Tensor (batch_size, num_images, 3, H, W)
+            mask: Bool Tensor (batch_size, num_images), True for padding positions
+        Returns:
+            logits: Tensor (batch_size, num_labels)
+            attentions: List of attention weights per layer
         """
-        super(FocalLoss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-        self.reduction = reduction
+        b, n, c, h, w = images.shape
+        # Flatten batch & image dims
+        imgs = images.view(b * n, c, h, w)
+        # Extract features and project
+        feats = self.backbone(imgs).view(b, n, -1)
+        feats = self.proj(feats)  # (b, n, d_model)
 
-    def forward(self, inputs, targets):
-        """
-        inputs: (B, C), đầu ra sigmoid của mô hình
-        targets: (B, C), nhãn nhị phân
-        """
-        eps = 1e-8  # để tránh log(0)
-        inputs = torch.clamp(inputs, eps, 1.0 - eps)  # tránh nan
+        # Prepare CLS token + positional embeddings
+        cls_tokens = self.cls_token.expand(b, -1, -1)       # (b, 1, d_model)
+        x = torch.cat((cls_tokens, feats), dim=1)            # (b, n+1, d_model)
+        x = x + self.pos_embed[:, : n + 1, :]                # add pos embeddings
+        x = x.transpose(0, 1)  # -> (seq_len, b, d_model)
 
-        BCE_loss = - (targets * torch.log(inputs) + (1 - targets) * torch.log(1 - inputs))
-        pt = torch.where(targets == 1, inputs, 1 - inputs)
-        focal_term = (1 - pt) ** self.gamma
+        # Key padding mask: True for padding
+        key_padding_mask = mask if mask is not None else None
 
-        loss = self.alpha * focal_term * BCE_loss
+        # Pass through transformer
+        x, attentions = self.transformer_encoder(
+            x,
+            mask=None,
+            src_key_padding_mask=key_padding_mask
+        )
+        # x shape: (seq_len, b, d_model)
 
-        if self.reduction == 'mean':
-            return loss.mean()
-        elif self.reduction == 'sum':
-            return loss.sum()
-        return loss
+        # Album representation = CLS token output
+        album_repr = x[0]         # (b, d_model)
+        album_repr = self.norm(album_repr)
+
+        # Multi-label logits
+        logits = self.classifier(album_repr)  # (b, num_labels)
+        return logits, attentions
+
+# --- Attention Visualization Utility ---
+def visualize_attention(attentions, layer=-1, image_names=None):
+    """
+    Plot CLS-token attention to each image in the album.
+
+    attentions: list of attn_weights per layer;
+                each attn_weights shape: (batch, num_heads, seq_len, seq_len)
+    layer: which layer to visualize (default last)
+    image_names: optional list of image labels
+    """
+    import matplotlib.pyplot as plt
+    # select layer and average across heads
+    attn = attentions[layer]                  # (b, heads, seq_len, seq_len)
+    attn_avg = attn.mean(dim=1)               # (b, seq_len, seq_len)
+    # CLS -> image tokens
+    cls_to_imgs = attn_avg[0, 0, 1:].detach().cpu().numpy()
+    N = cls_to_imgs.shape[0]
+
+    plt.figure()
+    plt.bar(range(N), cls_to_imgs)
+    plt.xlabel("Image Index")
+    plt.ylabel("Attention Score")
+    plt.title(f"Layer {layer} CLS→Image Attention")
+    labels = image_names if image_names is not None else list(range(N))
+    plt.xticks(range(N), labels, rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+# --- Example Usage ---
+if __name__ == "__main__":
+    # dummy batch of 2 albums, each with 6 images (3×224×224)
+    dummy_imgs = torch.randn(2, 6, 3, 224, 224)
+    model = EventLens(num_labels=5, max_images=10)
+
+    # Forward pass
+    logits, attentions = model(dummy_imgs)
+    preds = torch.sigmoid(logits)
+    print("Predictions shape:", preds.shape)
+
+    # Visualize attention from the last layer
+    visualize_attention(attentions, layer=-1, image_names=[f"img{i}" for i in range(6)])
+
+    # Training stub
+    # optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    # criterion = nn.BCEWithLogitsLoss()
+    # for epoch in range(num_epochs):
+    #     for images, labels in dataloader:
+    #         logits, _ = model(images)
+    #         loss = criterion(logits, labels)
+    #         optimizer.zero_grad()
+    #         loss.backward()
+    #         optimizer.step()

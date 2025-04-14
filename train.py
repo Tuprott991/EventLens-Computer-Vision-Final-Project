@@ -1,127 +1,149 @@
-from model_arch import AlbumEventClassifier
-from dataset import AlbumEventDataset
 import torch
-import torch.nn as nn
+from torch import nn, optim
 from torch.utils.data import DataLoader, random_split
 from torchvision import transforms
-from tqdm import tqdm
-from torch.optim.lr_scheduler import CosineAnnealingLR
 from sklearn.metrics import average_precision_score
-from model_arch import FocalLoss
+from tqdm import tqdm
+import numpy as np
 
-def compute_mAP(outputs, labels):
-    outputs = torch.sigmoid(outputs).detach().cpu().numpy()
-    labels = labels.detach().cpu().numpy()
-    return average_precision_score(labels, outputs, average='macro')  # 'macro' for mean over all classes
+from dataset import AlbumEventDataset
+from model_arch import EventLens  # assuming your model is saved in model.py
 
-def freeze_swin_params(model):
+import os
+import copy
+
+# --- Config ---
+JSON_PATH = '/kaggle/dataset/CUFED/event_type.json'
+IMAGE_ROOT = '/kaggle/dataset/CUFED/images'
+NUM_LABELS = 23   
+BATCH_SIZE = 8
+EPOCHS = 20
+FREEZE_EPOCHS = 5
+MAX_IMAGES = 20
+VAL_RATIO = 0.2
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# --- Transforms ---
+transform = transforms.Compose([
+    transforms.Resize((256, 256)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
+
+# --- Dataset and Dataloader ---
+full_dataset = AlbumEventDataset(
+    json_path=JSON_PATH,
+    image_root=IMAGE_ROOT,
+    transform=transform,
+    max_images=MAX_IMAGES
+)
+
+val_len = int(len(full_dataset) * VAL_RATIO)
+train_len = len(full_dataset) - val_len
+train_dataset, val_dataset = random_split(full_dataset, [train_len, val_len])
+
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+
+# --- Model, Optimizer, Loss ---
+model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
+model = model.to(DEVICE)
+
+criterion = nn.BCEWithLogitsLoss()
+optimizer = optim.Adam(model.parameters(), lr=1e-4)
+
+# --- Early Stopping ---
+best_val_loss = float('inf')
+patience = 4
+counter = 0
+best_model_state = None
+os.makedirs("checkpoints", exist_ok=True)
+
+# --- Freeze Backbone for first few epochs ---
+def freeze_backbone(model, freeze=True):
     for param in model.backbone.parameters():
-        param.requires_grad = False
+        param.requires_grad = not freeze
 
-def unfreeze_swin_params(model):
-    for param in model.backbone.parameters():
-        param.requires_grad = True
+# --- Evaluation: Calculate Loss & mAP ---
+@torch.no_grad()
+def evaluate(model, dataloader):
+    model.eval()
+    all_labels = []
+    all_logits = []
+    total_loss = 0
 
+    for images, labels in tqdm(dataloader, desc="Evaluating", leave=False):
+        images, labels = images.to(DEVICE), labels.to(DEVICE)
 
-if __name__ == '__main__':
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    # Import to Kaggle and input dataset
-    dataset = AlbumEventDataset(
-        json_path='/kaggle/input/thesis-cufed/CUFED/event_type.json',
-        image_root='/kaggle/input/thesis-cufed/CUFED/images',
-        transform=transform,
-        max_images=32
-    )
-    
-    train_size = int(0.8 * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-    
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=4)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=4)
-    
-    # initialize the model
-    model = AlbumEventClassifier(num_classes=len(dataset.label_binarizer.classes_), aggregator='transformer', max_images=32).cuda()
+        logits, _ = model(images)
+        loss = criterion(logits, labels)
+        total_loss += loss.item()
 
-    # Training settings
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=1e-5)   
-    num_epochs = 36
-    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
+        all_logits.append(logits.sigmoid().cpu().numpy())
+        all_labels.append(labels.cpu().numpy())
 
-    # Calculate pos_weight for BCEWithLogitsLoss
-    encoded_labels = dataset.encoded_labels  # numpy array: shape (num_samples, num_classes)
-    num_samples = len(encoded_labels)
+    all_logits = np.vstack(all_logits)
+    all_labels = np.vstack(all_labels)
 
-    # Tính số mẫu positive trên từng class
-    pos_counts = encoded_labels.sum(axis=0)  # (num_classes,)
-    neg_counts = num_samples - pos_counts
+    ap_per_class = []
+    for i in range(all_labels.shape[1]):
+        try:
+            ap = average_precision_score(all_labels[:, i], all_logits[:, i])
+        except:
+            ap = 0.0
+        ap_per_class.append(ap)
 
-    # Tính pos_weight = số negative / số positive cho từng class
-    pos_weight = torch.tensor(neg_counts / (pos_counts + 1e-5), dtype=torch.float32).cuda()
-    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-    
-    best_val_map = -1
-    best_val_loss = float('inf')
-    patience = 3
-    wait = 0
-    
-    for epoch in range(num_epochs):
-        # Freeze params for the first 5 epochs
-        if epoch == 0:
-            freeze_swin_params(model)
-        elif epoch == 7:
-            unfreeze_swin_params(model)
+    mean_ap = np.mean(ap_per_class)
+    return total_loss / len(dataloader), mean_ap
 
-        model.train()
-        epoch_loss = 0.0
-        
-        with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}") as tepoch:
-            for album_imgs, labels in tepoch:
-                album_imgs, labels = album_imgs.cuda(), labels.cuda()
-                outputs, _ = model(album_imgs)
-                loss = criterion(outputs, labels)
-                
-                optimizer.zero_grad() # Xóa gradient cũ
-                loss.backward() # Tính gradient
-                optimizer.step() # Cập nhật trọng số
-                
-                epoch_loss += loss.item()
-                tepoch.set_postfix(loss=f"{loss.item():.4f}")
-        
-        model.eval()
-        val_loss = 0.0
-        val_mAP = 0.0
+# --- Training Loop ---
+for epoch in range(EPOCHS):
+    print(f"\nEpoch {epoch+1}/{EPOCHS}")
 
-        with torch.no_grad():
-            for album_imgs, labels in val_loader:
-                album_imgs, labels = album_imgs.cuda(), labels.cuda()
-                outputs, _ = model(album_imgs)
-                val_loss += criterion(outputs, labels).item()
-                # val_mAP += compute_mAP(outputs, labels)
-        
-        val_loss /= len(val_loader)
-        # val_mAP /= len(val_loader)
-        print(f"✅ Epoch {epoch+1}/{num_epochs} | Train Loss: {epoch_loss/len(train_loader):.4f} | Val Loss: {val_loss:.4f} | Val mAP: {val_mAP:.4f}\n")
-        
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save(model.state_dict(), 'best_model.pth')
-            print("🔥 Saved model with best val_loss !")
-            wait = 0
-        else:
-            wait += 1
-            print(f"⏳ No improvement in val_loss for {wait} epoch(s)")
+    if epoch < FREEZE_EPOCHS:
+        freeze_backbone(model, freeze=True)
+    else:
+        freeze_backbone(model, freeze=False)
 
-        if wait >= patience:
-            print("⛔ Early stopping due to no improvement in val_mAP.")
-            break
-        
-        scheduler.step()
-        # torch.cuda.empty_cache()
+    model.train()
+    train_loss = 0
+    loop = tqdm(train_loader, desc="Training")
+    for images, labels in loop:
+        images, labels = images.to(DEVICE), labels.to(DEVICE)
 
+        logits, _ = model(images)
+        loss = criterion(logits, labels)
 
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss.item()
+        loop.set_postfix(loss=loss.item())
+
+    avg_train_loss = train_loss / len(train_loader)
+
+    val_loss, val_map = evaluate(model, val_loader)
+    print(f"Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val mAP: {val_map:.4f}")
+
+    # --- Checkpointing ---
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        counter = 0
+        best_model_state = copy.deepcopy(model.state_dict())
+        torch.save(best_model_state, f"checkpoints/best_model_epoch{epoch+1}_val{val_loss:.4f}.pth")
+        print("✅ Improved Val Loss — model saved.")
+    else:
+        counter += 1
+        print(f"⏳ No improvement in val loss. Patience: {counter}/{patience}")
+
+    # --- Early stopping ---
+    if counter >= patience:
+        print("🛑 Early stopping triggered.")
+        break
+
+# --- Save the model ---
+os.makedirs("checkpoints", exist_ok=True)
+torch.save(model.state_dict(), "checkpoints/eventlens_final.pth")
+print("\nTraining complete. Model saved to checkpoints/eventlens_final.pth")

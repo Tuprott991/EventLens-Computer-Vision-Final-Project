@@ -4,7 +4,7 @@ from torchvision import transforms
 import json
 from sklearn.metrics import average_precision_score  # For calculating AP
 import numpy as np
-from model_arch import AlbumEventClassifier, load_model
+from old_model_arch import AlbumEventClassifier, load_model
 from dataset import AlbumEventDataset, load_labels, prepare_dataset  
 
 def infer(model, dataloader, device):
