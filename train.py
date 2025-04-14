@@ -12,7 +12,7 @@ from model_arch import EventLens  # assuming your model is saved in model.py
 import os
 import copy
 
-# --- Config ---
+# --- Config hyperparameters ---
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
@@ -124,7 +124,7 @@ for epoch in range(EPOCHS):
 
     model.train()
     train_loss = 0
-    loop = tqdm(train_loader, desc="Training")
+    loop = tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{EPOCHS}")
     for images, labels in loop:
         images, labels = images.to(DEVICE), labels.to(DEVICE)
 
