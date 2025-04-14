@@ -95,8 +95,8 @@ class EventLens(nn.Module):
         # project to transformer dimension
         self.proj = nn.Linear(backbone.fc.in_features, d_model)
 
-        feat_dim = self.backbone.num_features
-        self.proj = nn.Linear(feat_dim, d_model)
+        # feat_dim = self.backbone.num_features
+        # self.proj = nn.Linear(feat_dim, d_model)
 
 
         # 2) Learnable CLS token & positional embeddings for album
