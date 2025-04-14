@@ -73,7 +73,7 @@ class EventLens(nn.Module):
         # 1) Image feature extractor (ResNet50 backbone)\
         # Use ResNet50 as the backbone for image feature extraction
 
-        # backbone = models.resnet50(pretrained=pretrained_backbone)
+        backbone = models.resnet50(pretrained=pretrained_backbone)
 
         # Use Timm for Swin or other backbones if needed
 
@@ -81,18 +81,19 @@ class EventLens(nn.Module):
 
         
         # 1) Image feature extractor (ConvNeXt backbone)
-        self.backbone = timm.create_model(
-            backbone_name,
-            pretrained=pretrained_backbone,
-            num_classes=0,      # remove classification head
-            global_pool=''      # disable default pooling
-        )
+        # self.backbone = timm.create_model(
+        #     backbone_name,
+        #     pretrained=pretrained_backbone,
+        #     num_classes=0,      # remove classification head
+        #     global_pool=''      # disable default pooling
+        # )
 
         # remove the classification head
+        modules = list(backbone.children())[:-1]
         
-        # self.backbone = nn.Sequential(*modules)
+        self.backbone = nn.Sequential(*modules)
         # project to transformer dimension
-        # self.proj = nn.Linear(backbone.fc.in_features, d_model)
+        self.proj = nn.Linear(backbone.fc.in_features, d_model)
 
         feat_dim = self.backbone.num_features
         self.proj = nn.Linear(feat_dim, d_model)
@@ -128,7 +129,7 @@ class EventLens(nn.Module):
         # Flatten batch & image dims
         imgs = images.view(b * n, c, h, w)
         # Extract features and project
-        feats = self.backbone(imgs).reshape(b, n, -1) # (b, n, feat_dim)
+        feats = self.backbone(imgs).view(b, n, -1)
         feats = self.proj(feats)  # (b, n, d_model)
 
         # Prepare CLS token + positional embeddings
