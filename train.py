@@ -16,7 +16,8 @@ import copy
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
-BATCH_SIZE = 32
+BATCH_SIZE = 16
+LEARNING_RATE = 5e-5
 EPOCHS = 20
 FREEZE_EPOCHS = 5
 MAX_IMAGES = 20
@@ -62,6 +63,9 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_w
 model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
 model = model.to(DEVICE)
 
+# Load pretrained weights if available
+model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+
 print("Calculating positive weights for BCEWithLogitsLoss...")
 # Assuming AlbumEventDataset has a `labels` attribute or method
 # Access preloaded labels directly from the dataset
@@ -70,7 +74,7 @@ pos_weight = compute_pos_weights(train_labels)
 print(f"Positive weights: {pos_weight}")
 
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(DEVICE))
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
+optimizer = optim.Adam(model.parameters(), LEARNING_RATE)
 
 # --- Early Stopping ---
 best_val_loss = float('inf')
