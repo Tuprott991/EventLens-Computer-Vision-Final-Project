@@ -64,7 +64,8 @@ model = model.to(DEVICE)
 
 print("Calculating positive weights for BCEWithLogitsLoss...")
 # Assuming AlbumEventDataset has a `labels` attribute or method
-train_labels = torch.tensor(train_dataset.dataset.tensor_labels, dtype=torch.float32)[train_dataset.indices].to(DEVICE)
+# Access preloaded labels directly from the dataset
+train_labels = torch.tensor(train_dataset.dataset.get_labels(), dtype=torch.float32)[train_dataset.indices].to(DEVICE)
 pos_weight = compute_pos_weights(train_labels)
 print(f"Positive weights: {pos_weight}")
 

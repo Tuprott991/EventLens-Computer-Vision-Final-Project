@@ -25,7 +25,6 @@ class AlbumEventDataset(Dataset):
         self.label_binarizer = MultiLabelBinarizer()
         self.label_binarizer.fit(self.labels)
         self.encoded_labels = self.label_binarizer.transform(self.labels)
-        self.tensor_labels = [self._get_label(item) for item in self.data]  # Preload labels
 
         # Print label frequencies before applying oversampling
         # self.print_label_frequencies()
@@ -59,6 +58,10 @@ class AlbumEventDataset(Dataset):
 
         album_tensor = torch.stack(images)  # (N, C, H, W)
         return album_tensor, label
+    
+    def get_labels(self):
+        """Returns the encoded labels for all albums."""
+        return self.encoded_labels
 
 
     def print_label_frequencies(self):
