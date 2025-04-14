@@ -23,6 +23,18 @@ MAX_IMAGES = 20
 VAL_RATIO = 0.2
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+def compute_pos_weights(labels):
+    """
+    Compute positive weights for each class for BCEWithLogitsLoss
+    labels: Tensor of shape (num_samples, num_classes)
+    """
+    labels = labels.float()
+    n_samples, n_classes = labels.shape
+    pos_counts = labels.sum(dim=0)
+    neg_counts = n_samples - pos_counts
+    pos_weight = neg_counts / (pos_counts + 1e-5)  # avoid division by zero
+    return pos_weight
+
 # --- Transforms ---
 transform = transforms.Compose([
     transforms.Resize((256, 256)),
@@ -50,7 +62,11 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_w
 model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
 model = model.to(DEVICE)
 
-criterion = nn.BCEWithLogitsLoss()
+train_labels_tensor = torch.tensor([label for _, label in train_dataset], dtype=torch.float32).to(DEVICE)
+pos_weight = compute_pos_weights(train_labels_tensor)
+print(f"Positive weights: {pos_weight}")
+
+criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(DEVICE))
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 # --- Early Stopping ---
