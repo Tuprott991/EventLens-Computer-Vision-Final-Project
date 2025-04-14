@@ -25,6 +25,7 @@ class AlbumEventDataset(Dataset):
         self.label_binarizer = MultiLabelBinarizer()
         self.label_binarizer.fit(self.labels)
         self.encoded_labels = self.label_binarizer.transform(self.labels)
+        self.tensor_labels = [self._get_label(item) for item in self.data]  # Preload labels
 
         # Print label frequencies before applying oversampling
         # self.print_label_frequencies()

@@ -62,8 +62,10 @@ val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_w
 model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
 model = model.to(DEVICE)
 
-train_labels_tensor = torch.tensor([label for _, label in train_dataset], dtype=torch.float32).to(DEVICE)
-pos_weight = compute_pos_weights(train_labels_tensor)
+print("Calculating positive weights for BCEWithLogitsLoss...")
+# Assuming AlbumEventDataset has a `labels` attribute or method
+train_labels = torch.tensor(train_dataset.dataset.tensor_labels, dtype=torch.float32)[train_dataset.indices].to(DEVICE)
+pos_weight = compute_pos_weights(train_labels)
 print(f"Positive weights: {pos_weight}")
 
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(DEVICE))
