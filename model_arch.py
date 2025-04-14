@@ -108,6 +108,7 @@ class EventLens(nn.Module):
 
         # 4) Classification head (multi-label)
         self.norm = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(p=0.2) 
         self.classifier = nn.Linear(d_model, num_labels)
 
         # Initialize embeddings
@@ -150,6 +151,7 @@ class EventLens(nn.Module):
         # Album representation = CLS token output
         album_repr = x[0]         # (b, d_model)
         album_repr = self.norm(album_repr)
+        album_repr = self.dropout(album_repr) 
 
         # Multi-label logits
         logits = self.classifier(album_repr)  # (b, num_labels)
