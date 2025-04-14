@@ -17,7 +17,7 @@ JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
 BATCH_SIZE = 6
-LEARNING_RATE = 7e-5
+LEARNING_RATE = 3e-5
 EPOCHS = 20
 FREEZE_EPOCHS = 5
 MAX_IMAGES = 20
@@ -64,8 +64,9 @@ model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
 model = model.to(DEVICE)
 
 # Load pretrained weights if available
-if os.path.exists('checkpoints/best_model_epoch5_val0.5863.pth'):
-    model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+if os.path.exists('checkpoints/eventlens_final.pth'):
+    # model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+    model.load_state_dict(torch.load('checkpoints/eventlens_final.pth'))
     print("Pretrained weights loaded.")
 else:
     print("No pretrained weights found. Training from scratch.")
