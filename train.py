@@ -16,7 +16,7 @@ import copy
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 EPOCHS = 20
 FREEZE_EPOCHS = 5
 MAX_IMAGES = 20
