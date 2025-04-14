@@ -64,7 +64,10 @@ model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
 model = model.to(DEVICE)
 
 # Load pretrained weights if available
-model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+if os.path.exists('checkpoints/best_model_epoch5_val0.5863.pth'):
+    model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+else:
+    print("No pretrained weights found. Training from scratch.")
 
 print("Calculating positive weights for BCEWithLogitsLoss...")
 # Assuming AlbumEventDataset has a `labels` attribute or method
