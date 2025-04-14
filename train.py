@@ -13,8 +13,8 @@ import os
 import copy
 
 # --- Config ---
-JSON_PATH = '/kaggle/dataset/CUFED/event_type.json'
-IMAGE_ROOT = '/kaggle/dataset/CUFED/images'
+JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
+IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
 BATCH_SIZE = 8
 EPOCHS = 20
