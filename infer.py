@@ -1,62 +1,110 @@
 import torch
-from torch.utils.data import DataLoader
 from torchvision import transforms
-import json
-from sklearn.metrics import average_precision_score  # For calculating AP
+from PIL import Image
+import os
 import numpy as np
-from old_model_arch import AlbumEventClassifier, load_model
-from dataset import AlbumEventDataset, load_labels, prepare_dataset  
 
-def infer(model, dataloader, device):
-    all_predictions = []
-    all_labels = []
-    model.to(device)  # Move the model to the selected device
-    with torch.no_grad():  # No need to calculate gradients during inference
-        for album_tensor, labels in dataloader:
-            album_tensor = album_tensor.to(device)  # Move tensor to selected device
-            outputs = model(album_tensor)  # Model outputs probabilities
-            all_predictions.append(outputs.cpu().numpy())  # Move back to CPU
-            all_labels.append(labels.cpu().numpy())  # Move labels to CPU as well
-    all_predictions = np.concatenate(all_predictions, axis=0)
-    all_labels = np.concatenate(all_labels, axis=0)
-    return all_predictions, all_labels
+from dataset import AlbumEventDataset
+from model_arch import EventLens, visualize_attention
+import json
 
-def calculate_map(predictions, labels):
-    # Compute the mAP for multi-label classification
-    mAP = 0
-    num_classes = labels.shape[1]
-    for i in range(num_classes):
-        ap = average_precision_score(labels[:, i], predictions[:, i])  # Compute AP for each class
-        mAP += ap
-    mAP /= num_classes
-    return mAP
+from sklearn.metrics import average_precision_score
 
-def calculate_precision(predictions, labels, threshold=0.5):
-    predictions = (predictions > threshold).astype(int)  # Binarize predictions
-    true_positives = np.sum(predictions * labels, axis=0)  # True positives for each class
-    predicted_positives = np.sum(predictions, axis=0)  # Predicted positives for each class
-    precision = true_positives / (predicted_positives + 1e-10)  # Avoid division by zero
-    return precision
+from sklearn.preprocessing import MultiLabelBinarizer
 
+# --- Config hyperparameters ---
+IMAGE_ROOT = 'CUFED5_Album/'
+OUTPUT_JSON = 'predictions.json'
+JSON_PATH = 'dataset/event_type.json'
+NUM_LABELS= 23
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+model_labels = ['Architecture', 'BeachTrip', 'Birthday', 'BusinessActivity', 'CasualFamilyGather',
+                'Christmas', 'Cruise', 'Graduation', 'GroupActivity', 'Halloween',
+                'Museum', 'NatureTrip', 'PersonalArtActivity', 'PersonalMusicActivity',
+                'PersonalSports', 'Protest', 'ReligiousActivity', 'Show', 'Sports',
+                'ThemePark', 'UrbanTrip', 'Wedding', 'Zoo']
+
+# --- Load the trained model ---
+model = EventLens(num_labels=NUM_LABELS)
+model.load_state_dict(torch.load('eventlens_2095.pth'))
+model = model.to(DEVICE)
+model.eval()
+
+# --- Define image transformations ---
+transform = transforms.Compose([
+    transforms.Resize((256, 256)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                         std=[0.229, 0.224, 0.225])
+])
+
+def get_label_from_path(path):
+    with open(path, 'r') as f:
+        data = json.load(f)
+
+    labels = list(data.values())
+    # Unique labels and rearranging them
+    label_binarizer = MultiLabelBinarizer()
+    label_binarizer.fit(labels)
+
+    # Convert to MultiLabelBinarizer format
+    return list(label_binarizer.classes_)
+
+# print(get_label_from_path(JSON_PATH)) 
+
+# Load album images for inference
+def load_album_images(album_path, transform=None):
+    images = []
+    files = sorted(os.listdir(album_path))[:20]  # Limit to 32 images
+    for img_file in files:
+        img_path = os.path.join(album_path, img_file)
+        img = Image.open(img_path).convert('RGB')
+        if transform:
+            img = transform(img)
+        images.append(img)
+
+    # Padding if not enough images
+    while len(images) < 20:
+        images.append(torch.zeros_like(images[0]))
+
+    return torch.stack(images)  # (N, C, H, W)
+
+# Main
 if __name__ == '__main__':
-    model_path = 'best_model.pth'  
-    json_path = r'dataset/label.json'  
-    image_root = r'Eval_dataset/CV_event'  
+    predictions = {}
 
-    # Load model and labels
-    model = load_model(model_path)
-    labels = load_labels(json_path)
+    # Iterate through all album directories
+    for album_name in sorted(os.listdir(IMAGE_ROOT)):
+        album_path = os.path.join(IMAGE_ROOT, album_name)
+        if not os.path.isdir(album_path):
+            continue
 
-    # Prepare dataset and DataLoader
-    transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
-    dataset = prepare_dataset(json_path, image_root, transform=transform)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+        # Load album images for inference
+        album_images = load_album_images(album_path, transform)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Move to device
+        album_images = album_images.to(DEVICE)
 
-    predictions, true_labels = infer(model, dataloader, device)
+        # Perform inference
+        with torch.no_grad():
+            logits, _ = model(album_images.unsqueeze(0))  # Get logits and ignore attentions
+            outputs = torch.sigmoid(logits).cpu().numpy()
 
-    mAP = calculate_map(predictions, true_labels)
-    print(f"Mean Average Precision (mAP): {mAP:.4f}")
-    print(f"Precision: {calculate_precision(predictions, true_labels)}")
+        # Collect labels with probabilities > 0.3
+        album_labels = []
+        for i, label in enumerate(model_labels):
+            if outputs[0][i] > 0.9:
+                album_labels.append(label)
+
+        # Save predictions for the current album
+        predictions[album_name] = album_labels
+
+    # Save all predictions to a JSON file
+    with open(OUTPUT_JSON, 'w') as f:
+        json.dump(predictions, f, indent=4)
+
+    print(f"Predictions saved to {OUTPUT_JSON}")
+
+
+

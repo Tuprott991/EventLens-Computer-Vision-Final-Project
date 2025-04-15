@@ -62,6 +62,10 @@ class AlbumEventDataset(Dataset):
     def get_labels(self):
         """Returns the encoded labels for all albums."""
         return self.encoded_labels
+    
+    def get_label_names(self):
+        """Returns the list of label names in the order of their indices."""
+        return list(self.label_binarizer.classes_)
 
 
     def print_label_frequencies(self):
@@ -75,6 +79,12 @@ class AlbumEventDataset(Dataset):
         for label, count in label_counts.items():
             print(f"Label: {label}, Frequency: {count}")
 
+    def print_label_by_index(self, idx):
+        """Prints the label array for a given index."""
+        if idx < 0 or idx >= len(self.encoded_labels):
+            print(f"Index {idx} is out of range. Valid range: 0 to {len(self.encoded_labels) - 1}")
+            return
+        print(f"Label for index {idx}: {self.encoded_labels[idx]}")
 
 # Testing the dataset with oversampling enabled
 if __name__ == '__main__':
@@ -85,9 +95,15 @@ if __name__ == '__main__':
     ])
 
     dataset = AlbumEventDataset(
-        json_path='dataset/CUFED/event_type.json',
-        image_root='dataset/CUFED/images',
+        json_path='dataset/event_type.json',
+        image_root='dataset/images',
         transform=transform,
-        max_images=32,
+        max_images=20,
         oversampling=True  # Enable random oversampling
     )
+
+    label_names = dataset.get_label_names()
+    for idx, label_name in enumerate(label_names):
+        print(f"Index {idx}: {label_name}")
+
+
