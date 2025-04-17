@@ -32,3 +32,4 @@ The model architecture consists of:
 The dataset is structured as follows:
 - **Images**: Stored in folders corresponding to album IDs.
 - **Labels**: Defined in a JSON file (`event_type.json`) with multi-label annotations.
+You can find the full dataset (for both training and evaluating) at: https://www.kaggle.com/datasets/quanho02/thesis-cufed/data
