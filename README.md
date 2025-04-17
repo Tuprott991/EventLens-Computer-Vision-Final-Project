@@ -2,7 +2,7 @@
 
 ![Architecture](architecture.png)
 
-EventLens is a deep learning-based project for multi-label classification of photo albums into various event categories. The project leverages a Swin Transformer backbone for feature extraction and a transformer-based aggregator for sequence modeling, and a MLP for classification. It is designed to handle multi-label classification tasks with high accuracy and scalability.
+EventLens is a deep learning-based project for multi-label classification of photo albums into various event categories. The project leverages a Swin Transformer backbone for feature extraction (Actually we have replace it with Resnet50 and ConvNext due to the lack of resources, especially GPU :>) and a transformer-based aggregator for sequence modeling, and a MLP for classification. It is designed to handle multi-label classification tasks with high accuracy and scalability.
 
 ---
 
