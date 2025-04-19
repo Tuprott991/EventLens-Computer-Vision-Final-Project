@@ -64,7 +64,7 @@ class EventLens(nn.Module):
         num_labels,
         d_model=512,
         nhead=8,
-        num_layers=3,
+        num_layers=8,
         max_images=20,
         backbone_name = 'convnext_base',
         pretrained_backbone=True
