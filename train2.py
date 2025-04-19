@@ -8,16 +8,14 @@ import numpy as np
 import os
 import copy
 
-# Giả định rằng bạn đã có file dataset.py và model_arch.py
 from dataset import AlbumEventDataset
-from model_arch import EventLens
+from model_archi2 import EventLens  # Assuming your model is in model_arch.py
 
 # --- Config hyperparameters ---
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
-NUM_LABELS = 23   
+NUM_LABELS = 23
 BATCH_SIZE = 6
-NEW_BATCH_SIZE = 4  # Batch size sau khi unfreeze
 LEARNING_RATE = 3e-5
 EPOCHS = 20
 FREEZE_EPOCHS = 5
@@ -37,9 +35,10 @@ def compute_pos_weights(labels):
     pos_weight = neg_counts / (pos_counts + 1e-5)  # Avoid division by zero
     return pos_weight
 
-# --- Transforms ---
+# --- Transforms for ViT-B/16 ---
+# ViT-B/16 expects 224x224 images, so adjust the transform
 transform = transforms.Compose([
-    transforms.Resize((256, 256)),
+    transforms.Resize((224, 224)),  # Changed from 256x256 to match ViT input
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
@@ -57,32 +56,39 @@ val_len = int(len(full_dataset) * VAL_RATIO)
 train_len = len(full_dataset) - val_len
 train_dataset, val_dataset = random_split(full_dataset, [train_len, val_len])
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 # --- Model, Optimizer, Loss ---
+# Initialize EventLens with ViT-B/16 backbone
 model = EventLens(
     num_labels=NUM_LABELS,
     max_images=MAX_IMAGES,
-    backbone_name='vit_base_patch16_224',  # Sử dụng ViT-B/16
+    backbone_name='vit_base_patch16_224',  # Specify ViT backbone
     pretrained_backbone=True
 )
 model = model.to(DEVICE)
 
 # Load pretrained weights if available
 if os.path.exists('checkpoints/eventlens_final.pth'):
-    model.load_state_dict(torch.load('checkpoints/eventlens_final.pth'))
+    model.load_state_dict(torch.load('checkpoints/eventlens_final.pth', map_location=DEVICE))
     print("Pretrained weights loaded.")
 else:
     print("No pretrained weights found. Training from scratch.")
 
-# Tính positive weights cho BCEWithLogitsLoss
+# --- Compute positive weights ---
+# Modified to collect labels from the dataset
 print("Calculating positive weights for BCEWithLogitsLoss...")
-train_labels = torch.tensor(train_dataset.dataset.get_labels(), dtype=torch.float32)[train_dataset.indices].to(DEVICE)
+train_labels = []
+for idx in train_dataset.indices:
+    _, label = full_dataset[idx]  # Assume dataset returns (images, labels)
+    train_labels.append(label)
+train_labels = torch.stack(train_labels).to(DEVICE)
 pos_weight = compute_pos_weights(train_labels)
 print(f"Positive weights: {pos_weight}")
 
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(DEVICE))
+optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 # --- Early Stopping ---
 best_val_loss = float('inf')
@@ -91,8 +97,11 @@ counter = 0
 best_model_state = None
 os.makedirs("checkpoints", exist_ok=True)
 
-# --- Freeze/Unfreeze Backbone ---
+# --- Freeze Backbone for first few epochs ---
 def freeze_backbone(model, freeze=True):
+    """
+    Freeze or unfreeze the ViT backbone parameters
+    """
     for param in model.backbone.parameters():
         param.requires_grad = not freeze
 
@@ -119,22 +128,26 @@ def evaluate(model, dataloader):
 
     ap_per_class = []
     for i in range(all_labels.shape[1]):
-        if all_labels[:, i].sum() == 0:  # Bỏ qua lớp không có nhãn dương
-            continue
-        ap = average_precision_score(all_labels[:, i], all_logits[:, i])
+        try:
+            ap = average_precision_score(all_labels[:, i], all_logits[:, i])
+        except:
+            ap = 0.0
         ap_per_class.append(ap)
 
-    mean_ap = np.mean(ap_per_class) if ap_per_class else 0.0
+    mean_ap = np.mean(ap_per_class)
     return total_loss / len(dataloader), mean_ap
 
 # --- Training Loop ---
-# Giai đoạn 1: Freeze backbone
-print("Phase 1: Training with frozen backbone...")
-freeze_backbone(model, freeze=True)
-optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=LEARNING_RATE)
-
-for epoch in range(FREEZE_EPOCHS):
+for epoch in range(EPOCHS):
     print(f"\nEpoch {epoch+1}/{EPOCHS}")
+
+    if epoch < FREEZE_EPOCHS:
+        freeze_backbone(model, freeze=True)
+        print("Backbone frozen for this epoch.")
+    else:
+        freeze_backbone(model, freeze=False)
+        print("Backbone unfrozen for this epoch.")
+
     model.train()
     train_loss = 0
     loop = tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{EPOCHS}")
@@ -156,7 +169,7 @@ for epoch in range(FREEZE_EPOCHS):
     val_loss, val_map = evaluate(model, val_loader)
     print(f"Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val mAP: {val_map:.4f}")
 
-    # Checkpointing
+    # --- Checkpointing ---
     if val_loss < best_val_loss:
         best_val_loss = val_loss
         counter = 0
@@ -167,59 +180,7 @@ for epoch in range(FREEZE_EPOCHS):
         counter += 1
         print(f"⏳ No improvement in val loss. Patience: {counter}/{patience}")
 
-    # Early stopping
-    if counter >= patience:
-        print("🛑 Early stopping triggered.")
-        break
-
-# Lưu model sau giai đoạn freeze
-torch.save(model.state_dict(), "checkpoints/model_after_freeze.pth")
-print("Model saved after freeze phase.")
-
-# Giai đoạn 2: Unfreeze backbone, giảm batch size, và fine-tune
-print("\nPhase 2: Unfreezing backbone and fine-tuning...")
-freeze_backbone(model, freeze=False)
-train_loader = DataLoader(train_dataset, batch_size=NEW_BATCH_SIZE, shuffle=True, num_workers=4)  # Giảm batch size
-val_loader = DataLoader(val_dataset, batch_size=NEW_BATCH_SIZE, shuffle=False, num_workers=4)
-
-# Cập nhật optimizer với learning rate giảm
-optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE / 2)  # Giảm learning rate khi fine-tune
-
-for epoch in range(FREEZE_EPOCHS, EPOCHS):
-    print(f"\nEpoch {epoch+1}/{EPOCHS}")
-    model.train()
-    train_loss = 0
-    loop = tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{EPOCHS}")
-    for images, labels in loop:
-        images, labels = images.to(DEVICE), labels.to(DEVICE)
-
-        logits, _ = model(images)
-        loss = criterion(logits, labels)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        train_loss += loss.item()
-        loop.set_postfix(loss=loss.item())
-
-    avg_train_loss = train_loss / len(train_loader)
-
-    val_loss, val_map = evaluate(model, val_loader)
-    print(f"Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val mAP: {val_map:.4f}")
-
-    # Checkpointing
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        counter = 0
-        best_model_state = copy.deepcopy(model.state_dict())
-        torch.save(best_model_state, f"checkpoints/best_model_epoch{epoch+1}_val{val_loss:.4f}.pth")
-        print("✅ Improved Val Loss — model saved.")
-    else:
-        counter += 1
-        print(f"⏳ No improvement in val loss. Patience: {counter}/{patience}")
-
-    # Early stopping
+    # --- Early stopping ---
     if counter >= patience:
         print("🛑 Early stopping triggered.")
         break

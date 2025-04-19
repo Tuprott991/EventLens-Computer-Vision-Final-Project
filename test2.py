@@ -31,7 +31,7 @@ if __name__ == '__main__':
     model = AlbumEventClassifier(num_classes=len(dataset.label_binarizer.classes_), aggregator='transformer', max_images=32).cuda()
     
     # Load the trained model weights
-    model.load_state_dict(torch.load('best_model.pth'))
+    model.load_state_dict(torch.load('eventlens_final.pth'))
     model.eval()
     
     # Print a single model prediction and true label
