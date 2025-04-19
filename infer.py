@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from dataset import AlbumEventDataset
-from model_arch import EventLens, visualize_attention
+from model_archi2 import EventLens, visualize_attention
 import json
 
 from sklearn.metrics import average_precision_score
