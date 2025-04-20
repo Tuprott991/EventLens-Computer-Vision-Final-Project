@@ -13,7 +13,7 @@ from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import MultiLabelBinarizer
 
 # --- Config hyperparameters ---
-IMAGE_ROOT = 'C:/Users/TRUNG NGHIA/OneDrive - VNU-HCMUS/Desktop/EventLens-Computer-Vision-Final-Project/Eval_dataset/CUFED5'
+IMAGE_ROOT = 'CUFED5'
 OUTPUT_JSON = 'predictions.json'
 JSON_PATH = 'dataset/event_type.json'
 NUM_LABELS= 23
@@ -33,7 +33,7 @@ model.eval()
 
 # --- Define image transformations ---
 transform = transforms.Compose([
-    transforms.Resize((256, 256)),
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
@@ -91,10 +91,11 @@ if __name__ == '__main__':
             logits, _ = model(album_images.unsqueeze(0))  # Get logits and ignore attentions
             outputs = torch.sigmoid(logits).cpu().numpy()
 
+        print(outputs)
         # Collect labels with probabilities > 0.3
         album_labels = []
         for i, label in enumerate(model_labels):
-            if outputs[0][i] > 0.1:
+            if outputs[0][i] > 0.9:
                 album_labels.append(label)
 
         # Save predictions for the current album

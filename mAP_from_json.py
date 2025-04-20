@@ -42,7 +42,7 @@ def calculate_precision_and_map(output_infer, output_true):
 
 if __name__ == "__main__":
     # Đọc dữ liệu từ file JSON
-    with open("output_infer.json", "r", encoding="utf-8") as f:
+    with open("predictions.json", "r", encoding="utf-8") as f:
         output_infer = json.load(f)
     
     with open("output_true.json", "r", encoding="utf-8") as f:

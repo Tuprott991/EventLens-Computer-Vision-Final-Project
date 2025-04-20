@@ -91,7 +91,7 @@ criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(DEVICE))
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 # --- Early Stopping ---
-best_val_loss = float('inf')
+best_val_map = 0.0  # Track best mAP (higher is better)
 patience = 4
 counter = 0
 best_model_state = None
@@ -170,15 +170,15 @@ for epoch in range(EPOCHS):
     print(f"Train Loss: {avg_train_loss:.4f} | Val Loss: {val_loss:.4f} | Val mAP: {val_map:.4f}")
 
     # --- Checkpointing ---
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
+    if val_map > best_val_map:  # Check if val mAP improved
+        best_val_map = val_map
         counter = 0
         best_model_state = copy.deepcopy(model.state_dict())
-        torch.save(best_model_state, f"checkpoints/best_model_epoch{epoch+1}_val{val_loss:.4f}.pth")
-        print("✅ Improved Val Loss — model saved.")
+        torch.save(best_model_state, f"checkpoints/best_model_epoch{epoch+1}_mAP{val_map:.4f}.pth")
+        print("✅ Improved Val mAP — model saved.")
     else:
         counter += 1
-        print(f"⏳ No improvement in val loss. Patience: {counter}/{patience}")
+        print(f"⏳ No improvement in val mAP. Patience: {counter}/{patience}")
 
     # --- Early stopping ---
     if counter >= patience:
