@@ -150,7 +150,7 @@ class EventLens(nn.Module):
         # x shape: (seq_len, b, d_model)
 
         # Album representation = CLS token output
-        album_repr = x[0]         # (b, d_model)
+        album_repr = x[0]  # (b, d_model)
         album_repr = self.norm(album_repr)
         album_repr = self.dropout(album_repr) 
 

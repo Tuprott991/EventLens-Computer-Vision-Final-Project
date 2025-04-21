@@ -94,7 +94,7 @@ if __name__ == '__main__':
         # Collect labels with probabilities > 0.3
         album_labels = []
         for i, label in enumerate(model_labels):
-            if outputs[0][i] > 0.9:
+            if outputs[0][i] > 0.7:
                 album_labels.append(label)
 
         # Save predictions for the current album
