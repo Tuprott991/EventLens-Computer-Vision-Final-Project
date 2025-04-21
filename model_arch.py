@@ -90,8 +90,9 @@ class EventLens(nn.Module):
             num_classes=0,      # remove classification head
             global_pool=''      # disable default pooling
         )
-
-        feat_dim = self.backbone.num_features
+        H = self.backbone.default_resolution[0] // 16  # H là kích thước không gian đầu ra từ backbone
+        W = self.backbone.default_resolution[1] // 16  # W là kích thước không gian đầu ra từ backbone
+        feat_dim = self.backbone.num_features * (H * W)  # H, W là kích thước không gian đầu ra từ backbone
         self.proj = nn.Linear(feat_dim, d_model)
         
         # 1) Image feature extractor (ConvNeXt backbone)
