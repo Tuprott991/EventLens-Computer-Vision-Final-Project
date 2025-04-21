@@ -50,7 +50,7 @@ full_dataset = AlbumEventDataset(
     json_path=JSON_PATH,
     image_root=IMAGE_ROOT,
     transform=transform,
-    max_images=20 
+    max_images=18 
 )
 
 val_len = int(len(full_dataset) * VAL_RATIO)
