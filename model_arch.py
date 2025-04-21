@@ -3,7 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 import timm
-
+import numpy as np
+from io import BytesIO
+from PIL import Image
 # --- Transformer Encoder Layer with Attention Extraction ---
 class TransformerEncoderLayerWithAttn(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1):
@@ -64,8 +66,8 @@ class EventLens(nn.Module):
         num_labels,
         d_model=512,
         nhead=8,    
-        num_layers=6,
-        max_images=50,
+        num_layers=6, # 6 , 3
+        max_images=30, # 30, 20
         backbone_name = 'convnextv2_base.fcmae_ft_in22k_in1k',
         pretrained_backbone=True
     ):
@@ -73,6 +75,7 @@ class EventLens(nn.Module):
         # 1) Image feature extractor (ResNet50 backbone)\
         # Use ResNet50 as the backbone for image feature extraction
 
+        # ResNet50 backbone
         # backbone = models.resnet50(pretrained=pretrained_backbone)
         # modules = list(backbone.children())[:-1]
 
@@ -80,10 +83,7 @@ class EventLens(nn.Module):
         # # project to transformer dimension
         # self.proj = nn.Linear(backbone.fc.in_features, d_model)
 
-        # Use Timm for Swin or other backbones if needed
-
-        # backbone = timm.create_model('swin_base_patch4_window7_224', pretrained=pretrained_backbone)
-
+        # ConvNeXtV2 backbone
         self.backbone = timm.create_model(
             backbone_name,
             pretrained=pretrained_backbone,
@@ -165,32 +165,67 @@ class EventLens(nn.Module):
         return logits, attentions
 
 # --- Attention Visualization Utility ---
-def visualize_attention(attentions, layer=-1, image_names=None):
+def visualize_attention(attentions, layer=-1, image_names=None, image_folder=None, images_per_row=5):
     """
-    Plot CLS-token attention to each image in the album.
+    Create a grid image of album images sorted by CLS-token attention scores.
 
     attentions: list of attn_weights per layer;
                 each attn_weights shape: (batch, num_heads, seq_len, seq_len)
     layer: which layer to visualize (default last)
-    image_names: optional list of image labels
+    image_names: list of image filenames
+    image_folder: path to the folder containing the images
+    images_per_row: Number of images per row in the grid
+    Returns:
+        A combined image as a NumPy array.
     """
-    import matplotlib.pyplot as plt
-    # select layer and average across heads
+    from PIL import Image
+    import numpy as np
+    import os
+
+    # Ensure layer is an integer
+    layer = int(layer)
+    # Select layer and average across heads
     attn = attentions[layer]                  # (b, heads, seq_len, seq_len)
     attn_avg = attn.mean(dim=1)               # (b, seq_len, seq_len)
     # CLS -> image tokens
     cls_to_imgs = attn_avg[0, 0, 1:].detach().cpu().numpy()
     N = cls_to_imgs.shape[0]
 
-    plt.figure()
-    plt.bar(range(N), cls_to_imgs)
-    plt.xlabel("Image Index")
-    plt.ylabel("Attention Score")
-    plt.title(f"Layer {layer} CLS→Image Attention")
-    labels = image_names if image_names is not None else list(range(N))
-    plt.xticks(range(N), labels, rotation=45)
-    plt.tight_layout()
-    plt.show()
+    # Ensure the number of attention scores matches the number of images
+    if image_names is not None:
+        N = min(N, len(image_names))  # Limit N to the number of available images
+        cls_to_imgs = cls_to_imgs[:N]  # Ensure attention scores are limited to the number of images
+
+    # Sort images by attention scores
+    sorted_indices = cls_to_imgs.argsort()[::-1]  # Descending order
+    sorted_scores = cls_to_imgs[sorted_indices]
+
+    if image_names is not None and image_folder is not None:
+        sorted_image_names = [image_names[i] for i in sorted_indices]
+        sorted_image_paths = [os.path.join(image_folder, img_name) for img_name in sorted_image_names]
+
+        # Load and resize images
+        images = [Image.open(img_path).resize((256, 256)) for img_path in sorted_image_paths]
+
+        # Calculate grid dimensions
+        rows = (len(images) + images_per_row - 1) // images_per_row  # Round up to the nearest row
+        grid_width = images_per_row * 256
+        grid_height = rows * 256
+
+        # Create a blank canvas for the grid
+        combined_image = Image.new("RGB", (grid_width, grid_height), (255, 255, 255))
+        for idx, img in enumerate(images):
+            row = idx // images_per_row
+            col = idx % images_per_row
+            x_offset = col * 256
+            y_offset = row * 256
+            combined_image.paste(img, (x_offset, y_offset))
+
+        # Convert to NumPy array
+        combined_image_array = np.array(combined_image)
+        return combined_image_array
+    else:
+        raise ValueError("Image names or folder not provided. Cannot create combined image.")
 
 # --- Example Usage ---
 if __name__ == "__main__":
