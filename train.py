@@ -5,6 +5,7 @@ from torchvision import transforms
 from sklearn.metrics import average_precision_score
 from tqdm import tqdm
 import numpy as np
+import huggingface_hub
 
 from dataset import AlbumEventDataset
 from model_arch import EventLens  # assuming your model is saved in model.py
@@ -16,8 +17,8 @@ import copy
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
-BATCH_SIZE = 16
-LEARNING_RATE = 1e-4
+BATCH_SIZE = 8
+LEARNING_RATE = 5e-5
 EPOCHS = 30
 FREEZE_EPOCHS = 5
 MAX_IMAGES = 30
@@ -64,12 +65,23 @@ model = EventLens(num_labels=NUM_LABELS, max_images=MAX_IMAGES)
 model = model.to(DEVICE)
 
 # Load pretrained weights if available
-if os.path.exists('checkpoints/eventlens_final.pth'):
-    # model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
-    model.load_state_dict(torch.load('checkpoints/eventlens_final.pth'))
-    print("Pretrained weights loaded.")
-else:
-    print("No pretrained weights found. Training from scratch.")
+# if os.path.exists('checkpoints/eventlens_final.pth'):
+#     # model.load_state_dict(torch.load('checkpoints/best_model_epoch5_val0.5863.pth'))
+#     model.load_state_dict(torch.load('checkpoints/eventlens_final.pth'))
+#     print("Pretrained weights loaded.")
+# else:
+#     print("No pretrained weights found. Training from scratch.")
+
+# Load pretrained weights from my huggingface account  if available
+
+#Download weight from my huggingface
+# !pip install huggingface_hub
+
+# !huggingface-cli login --token hf
+
+huggingface_model_download = huggingface_hub.hf_hub_download(repo_id="Vantuk/Eventlens_Photo_Album_Event_Recognition", filename="eventlens_convnext_v2_freeze.pth")
+
+model.load_state_dict(torch.load(huggingface_model_download, map_location=DEVICE))
 
 print("Calculating positive weights for BCEWithLogitsLoss...")
 # Assuming AlbumEventDataset has a `labels` attribute or method
@@ -125,7 +137,7 @@ def evaluate(model, dataloader):
     mean_ap = np.mean(ap_per_class)
     return total_loss / len(dataloader), mean_ap
 
-freeze_backbone(model, freeze=True) # Freeze backbone for first few epochs
+# freeze_backbone(model, freeze=True) # Freeze backbone for first few epochs
 
 # --- Training Loop ---
 for epoch in range(EPOCHS):
