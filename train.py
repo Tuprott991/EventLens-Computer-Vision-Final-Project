@@ -20,7 +20,7 @@ BATCH_SIZE = 16
 LEARNING_RATE = 1e-4
 EPOCHS = 30
 FREEZE_EPOCHS = 5
-MAX_IMAGES = 50
+MAX_IMAGES = 30
 VAL_RATIO = 0.2
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
