@@ -88,11 +88,9 @@ class EventLens(nn.Module):
             backbone_name,
             pretrained=pretrained_backbone,
             num_classes=0,      # remove classification head
-            global_pool=''      # disable default pooling
         )
-        H = self.backbone.default_resolution[0] // 16  # H là kích thước không gian đầu ra từ backbone
-        W = self.backbone.default_resolution[1] // 16  # W là kích thước không gian đầu ra từ backbone
-        feat_dim = self.backbone.num_features * (H * W)  # H, W là kích thước không gian đầu ra từ backbone
+
+        feat_dim = self.backbone.num_features
         self.proj = nn.Linear(feat_dim, d_model)
         
         # 1) Image feature extractor (ConvNeXt backbone)
@@ -137,11 +135,8 @@ class EventLens(nn.Module):
         # Flatten batch & image dims
         imgs = images.view(b * n, c, h, w)
         # Extract features and project
-        # Extract features and project
-        feats = self.backbone(imgs)  # Output shape: (b * n, C, H, W)
-        feats = feats.flatten(1)    # Flatten to shape: (b * n, C * H * W)
-        feats = self.proj(feats)    # Project to (b * n, d_model)
-        feats = feats.view(b, n, -1)  # Reshape to (b, n, d_model)
+        feats = self.backbone(imgs).view(b, n, -1)
+        feats = self.proj(feats)  # (b, n, d_model)
 
         # Prepare CLS token + positional embeddings
         cls_tokens = self.cls_token.expand(b, -1, -1)       # (b, 1, d_model)
