@@ -125,6 +125,8 @@ def evaluate(model, dataloader):
     mean_ap = np.mean(ap_per_class)
     return total_loss / len(dataloader), mean_ap
 
+freeze_backbone(model, freeze=True) # Freeze backbone for first few epochs
+
 # --- Training Loop ---
 for epoch in range(EPOCHS):
     print(f"\nEpoch {epoch+1}/{EPOCHS}")
