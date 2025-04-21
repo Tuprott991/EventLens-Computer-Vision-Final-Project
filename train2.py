@@ -16,7 +16,7 @@ from model_archi2 import EventLens  # Assuming your model is in model_arch.py
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23
-BATCH_SIZE = 8
+BATCH_SIZE = 6
 LEARNING_RATE = 1e-5
 EPOCHS = 30
 FREEZE_EPOCHS = 7
