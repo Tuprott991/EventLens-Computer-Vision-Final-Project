@@ -79,7 +79,7 @@ model = model.to(DEVICE)
 
 # !huggingface-cli login --token hf
 
-huggingface_model_download = huggingface_hub.hf_hub_download(repo_id="Vantuk/Eventlens_Photo_Album_Event_Recognition", filename="eventlens_convnext_v2_freeze.pth")
+huggingface_model_download = huggingface_hub.hf_hub_download(repo_id="Vantuk/Eventlens_Photo_Album_Event_Recognition", filename="eventlens_convnext_v2_unfreeze_1.pth")
 
 model.load_state_dict(torch.load(huggingface_model_download, map_location=DEVICE))
 
