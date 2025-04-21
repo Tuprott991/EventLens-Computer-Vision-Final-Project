@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 from dataset import AlbumEventDataset
-from model_archi2 import EventLens, visualize_attention
+from model_arch import EventLens, visualize_attention
 import json
 
 from sklearn.metrics import average_precision_score
@@ -13,7 +13,7 @@ from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import MultiLabelBinarizer
 
 # --- Config hyperparameters ---
-IMAGE_ROOT = 'CUFED5'
+IMAGE_ROOT = 'CUFED5_Album/'
 OUTPUT_JSON = 'predictions.json'
 JSON_PATH = 'dataset/event_type.json'
 NUM_LABELS= 23
@@ -27,13 +27,13 @@ model_labels = ['Architecture', 'BeachTrip', 'Birthday', 'BusinessActivity', 'Ca
 
 # --- Load the trained model ---
 model = EventLens(num_labels=NUM_LABELS)
-model.load_state_dict(torch.load('eventlens_final.pth',map_location=torch.device(DEVICE)))
+model.load_state_dict(torch.load('eventlens_2095.pth'))
 model = model.to(DEVICE)
 model.eval()
 
 # --- Define image transformations ---
 transform = transforms.Compose([
-    transforms.Resize((224, 224)),
+    transforms.Resize((256, 256)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225])
@@ -94,11 +94,7 @@ if __name__ == '__main__':
         # Collect labels with probabilities > 0.3
         album_labels = []
         for i, label in enumerate(model_labels):
-<<<<<<< HEAD
             if outputs[0][i] > 0.7:
-=======
-            if outputs[0][i] > 0.75:
->>>>>>> 0623b89404218ac185a10dc200efe337dc8fd494
                 album_labels.append(label)
 
         # Save predictions for the current album

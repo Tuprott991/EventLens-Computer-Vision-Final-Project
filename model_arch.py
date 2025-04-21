@@ -66,7 +66,7 @@ class EventLens(nn.Module):
         nhead=8,
         num_layers=8,
         max_images=20,
-        backbone_name = 'convnext_base',
+        backbone_name = 'convnextv2_base.fcmae_ft_in22k_in1k',
         pretrained_backbone=True
     ):
         super().__init__()
@@ -104,12 +104,8 @@ class EventLens(nn.Module):
 
         # remove the classification head
         
-
-
         # feat_dim = self.backbone.num_features
         # self.proj = nn.Linear(feat_dim, d_model)
-
-
         # 2) Learnable CLS token & positional embeddings for album
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
         self.pos_embed = nn.Parameter(torch.zeros(1, max_images + 1, d_model))
