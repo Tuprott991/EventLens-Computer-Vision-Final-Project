@@ -2,7 +2,9 @@
 
 ![Architecture](architecture.png)
 
-EventLens is a deep learning-based project for multi-label classification of photo albums into various event categories. The project leverages a Swin Transformer backbone for feature extraction and a transformer-based aggregator for sequence modeling, and a MLP for classification. It is designed to handle multi-label classification tasks with high accuracy and scalability.
+EventLens is a deep learning-based project for multi-label classification of photo albums into various event categories. The project leverages a Swin Transformer backbone for feature extraction (Actually we have replace it with Resnet50 and ConvNext due to the lack of resources, especially GPU :>) and a transformer-based aggregator for sequence modeling, and a MLP for classification. It is designed to handle multi-label classification tasks with high accuracy and scalability.
+
+Eventlens models download link: https://huggingface.co/Vantuk/Eventlens_Photo_Album_Event_Recognition/tree/main
 
 ---
 
@@ -32,3 +34,4 @@ The model architecture consists of:
 The dataset is structured as follows:
 - **Images**: Stored in folders corresponding to album IDs.
 - **Labels**: Defined in a JSON file (`event_type.json`) with multi-label annotations.
+You can find the full dataset (for both training and evaluating) at: https://www.kaggle.com/datasets/quanho02/thesis-cufed/data (Thanks quanho02 to stored this dataset as his thesis dataset)
