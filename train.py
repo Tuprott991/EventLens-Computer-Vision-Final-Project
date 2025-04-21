@@ -38,10 +38,10 @@ def compute_pos_weights(labels):
 
 # --- Transforms ---
 transform = transforms.Compose([
-    transforms.Resize((256, 256)),
+    transforms.Resize((224, 224)),  # Resize ảnh về kích thước phù hợp với ConvNeXt
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])
+    transforms.Normalize(mean=[0.5, 0.5, 0.5],  # Mean và Std phù hợp với ConvNeXt
+                         std=[0.5, 0.5, 0.5])
 ])
 
 # --- Dataset and Dataloader ---
@@ -83,7 +83,7 @@ optimizer = optim.Adam(model.parameters(), LEARNING_RATE)
 
 # --- Early Stopping ---
 best_val_loss = float('inf')
-patience = 4
+patience = 6
 counter = 0
 best_model_state = None
 os.makedirs("checkpoints", exist_ok=True)
