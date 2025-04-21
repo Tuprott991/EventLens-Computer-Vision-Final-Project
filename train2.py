@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 import os
 import copy
+import huggingface_hub
 
 from dataset import AlbumEventDataset
 from model_archi2 import EventLens  # Assuming your model is in model_arch.py
@@ -69,18 +70,22 @@ model = EventLens(
 )
 model = model.to(DEVICE)
 
-# Load pretrained weights if available
-if os.path.exists('checkpoints/eventlens_final.pth'):
-    model.load_state_dict(torch.load('checkpoints/eventlens_final.pth', map_location=DEVICE))
-    print("Pretrained weights loaded.")
-else:
-    print("No pretrained weights found. Training from scratch.")
+# # Load pretrained weights if available
+# if os.path.exists('checkpoints/eventlens_final.pth'):
+#     model.load_state_dict(torch.load('checkpoints/eventlens_final.pth', map_location=DEVICE))
+#     print("Pretrained weights loaded.")
+# else:
+#     print("No pretrained weights found. Training from scratch.")
+
+huggingface_model_download = huggingface_hub.hf_hub_download(repo_id="Gumangusi/EventLens", filename="best_model_epoch8_mAP0.8176.pth")
+
+model.load_state_dict(torch.load(huggingface_model_download, map_location=DEVICE))
 
 # --- Compute positive weights ---
 # Modified to collect labels from the dataset
 print("Calculating positive weights for BCEWithLogitsLoss...")
 train_labels = []
-for idx in train_dataset.indices:
+for idx in train_dataset.indices:   
     _, label = full_dataset[idx]  # Assume dataset returns (images, labels)
     train_labels.append(label)
 train_labels = torch.stack(train_labels).to(DEVICE)
