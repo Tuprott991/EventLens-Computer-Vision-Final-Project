@@ -84,11 +84,9 @@ model.load_state_dict(torch.load(huggingface_model_download, map_location=DEVICE
 # --- Compute positive weights ---
 # Modified to collect labels from the dataset
 print("Calculating positive weights for BCEWithLogitsLoss...")
-train_labels = []
-for idx in train_dataset.indices:   
-    _, label = full_dataset[idx]  # Assume dataset returns (images, labels)
-    train_labels.append(label)
-train_labels = torch.stack(train_labels).to(DEVICE)
+# Assuming AlbumEventDataset has a `labels` attribute or method
+# Access preloaded labels directly from the dataset
+train_labels = torch.tensor(train_dataset.dataset.get_labels(), dtype=torch.float32)[train_dataset.indices].to(DEVICE)
 pos_weight = compute_pos_weights(train_labels)
 print(f"Positive weights: {pos_weight}")
 
