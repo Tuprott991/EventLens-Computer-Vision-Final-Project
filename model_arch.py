@@ -73,12 +73,26 @@ class EventLens(nn.Module):
         # 1) Image feature extractor (ResNet50 backbone)\
         # Use ResNet50 as the backbone for image feature extraction
 
-        backbone = models.resnet50(pretrained=pretrained_backbone)
+        # backbone = models.resnet50(pretrained=pretrained_backbone)
+        # modules = list(backbone.children())[:-1]
+
+        # self.backbone = nn.Sequential(*modules)
+        # # project to transformer dimension
+        # self.proj = nn.Linear(backbone.fc.in_features, d_model)
 
         # Use Timm for Swin or other backbones if needed
 
         # backbone = timm.create_model('swin_base_patch4_window7_224', pretrained=pretrained_backbone)
 
+        self.backbone = timm.create_model(
+            backbone_name,
+            pretrained=pretrained_backbone,
+            num_classes=0,      # remove classification head
+            global_pool=''      # disable default pooling
+        )
+
+        feat_dim = self.backbone.num_features
+        self.proj = nn.Linear(feat_dim, d_model)
         
         # 1) Image feature extractor (ConvNeXt backbone)
         # self.backbone = timm.create_model(
@@ -89,11 +103,8 @@ class EventLens(nn.Module):
         # )
 
         # remove the classification head
-        modules = list(backbone.children())[:-1]
         
-        self.backbone = nn.Sequential(*modules)
-        # project to transformer dimension
-        self.proj = nn.Linear(backbone.fc.in_features, d_model)
+
 
         # feat_dim = self.backbone.num_features
         # self.proj = nn.Linear(feat_dim, d_model)
