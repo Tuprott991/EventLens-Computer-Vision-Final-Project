@@ -16,9 +16,9 @@ JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23
 BATCH_SIZE = 4
-LEARNING_RATE = 5e-5
-EPOCHS = 20
-FREEZE_EPOCHS = 5
+LEARNING_RATE = 3e-5
+EPOCHS = 30
+FREEZE_EPOCHS = 7
 MAX_IMAGES = 20
 VAL_RATIO = 0.2
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -92,7 +92,7 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 # --- Early Stopping ---
 best_val_map = 0.0  # Track best mAP (higher is better)
-patience = 4
+patience = 8
 counter = 0
 best_model_state = None
 os.makedirs("checkpoints", exist_ok=True)

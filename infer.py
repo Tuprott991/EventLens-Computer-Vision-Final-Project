@@ -91,11 +91,10 @@ if __name__ == '__main__':
             logits, _ = model(album_images.unsqueeze(0))  # Get logits and ignore attentions
             outputs = torch.sigmoid(logits).cpu().numpy()
 
-        print(outputs)
         # Collect labels with probabilities > 0.3
         album_labels = []
         for i, label in enumerate(model_labels):
-            if outputs[0][i] > 0.9:
+            if outputs[0][i] > 0.75:
                 album_labels.append(label)
 
         # Save predictions for the current album

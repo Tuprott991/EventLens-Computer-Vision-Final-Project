@@ -1,25 +1,46 @@
 {
-    "000": [],
-    "001": [],
+    "000": [
+        "Architecture",
+        "ReligiousActivity"
+    ],
+    "001": [
+        "Graduation",
+        "ReligiousActivity",
+        "Wedding"
+    ],
     "002": [
-        "CasualFamilyGather"
+        "PersonalArtActivity"
     ],
     "003": [
         "Graduation"
     ],
-    "004": [],
-    "005": [],
+    "004": [
+        "Graduation"
+    ],
+    "005": [
+        "Architecture",
+        "Museum",
+        "PersonalArtActivity"
+    ],
     "006": [
+        "Architecture",
+        "Museum",
         "PersonalArtActivity",
-        "Show"
+        "UrbanTrip"
     ],
     "007": [
-        "Architecture"
+        "Architecture",
+        "PersonalArtActivity",
+        "UrbanTrip"
     ],
     "008": [
-        "BusinessActivity"
+        "BusinessActivity",
+        "Show"
     ],
-    "009": [],
+    "009": [
+        "Graduation",
+        "ReligiousActivity"
+    ],
     "010": [
         "Graduation"
     ],
@@ -27,32 +48,36 @@
         "Graduation"
     ],
     "012": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "013": [
-        "PersonalMusicActivity",
+        "Architecture",
+        "Museum",
+        "PersonalArtActivity",
         "Show"
     ],
     "014": [
-        "Graduation",
-        "PersonalMusicActivity",
+        "ReligiousActivity",
         "Show"
     ],
     "015": [
         "Graduation"
     ],
     "016": [
+        "Graduation",
+        "PersonalArtActivity",
         "Wedding"
     ],
     "017": [
-        "BusinessActivity"
+        "ReligiousActivity",
+        "Wedding"
     ],
     "018": [
         "PersonalArtActivity"
     ],
     "019": [
-        "BusinessActivity"
+        "BusinessActivity",
+        "PersonalArtActivity"
     ],
     "020": [
         "Show"
@@ -61,206 +86,240 @@
         "Graduation"
     ],
     "022": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "023": [
         "Graduation"
     ],
-    "024": [],
+    "024": [
+        "Christmas"
+    ],
     "025": [
-        "BusinessActivity"
+        "PersonalArtActivity"
     ],
     "026": [
-        "BusinessActivity"
+        "ReligiousActivity"
     ],
     "027": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "028": [
-        "NatureTrip"
+        "Architecture",
+        "PersonalArtActivity"
     ],
     "029": [
         "PersonalSports",
-        "Show"
+        "Sports"
     ],
     "030": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "031": [
-        "PersonalSports",
         "Show"
     ],
     "032": [
-        "Wedding"
+        "PersonalSports",
+        "Sports"
     ],
     "033": [
         "Wedding"
     ],
     "034": [
-        "BusinessActivity"
+        "BusinessActivity",
+        "ReligiousActivity"
     ],
     "035": [
         "Graduation"
     ],
     "036": [
-        "Birthday",
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "PersonalArtActivity"
     ],
     "037": [
-        "Birthday",
-        "CasualFamilyGather"
+        "PersonalArtActivity"
     ],
     "038": [
-        "BusinessActivity"
+        "Architecture",
+        "Museum",
+        "PersonalArtActivity"
     ],
     "039": [
+        "Graduation",
         "Wedding"
     ],
     "040": [
-        "CasualFamilyGather",
         "Wedding"
     ],
-    "041": [],
+    "041": [
+        "Architecture",
+        "Museum",
+        "PersonalArtActivity"
+    ],
     "042": [
-        "BeachTrip",
         "Cruise"
     ],
     "043": [
         "Wedding"
     ],
     "044": [],
-    "045": [],
-    "046": [],
+    "045": [
+        "Architecture",
+        "PersonalArtActivity"
+    ],
+    "046": [
+        "Wedding"
+    ],
     "047": [
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "PersonalArtActivity"
     ],
     "048": [
         "Wedding"
     ],
     "049": [
         "Birthday",
-        "CasualFamilyGather"
+        "PersonalArtActivity"
     ],
     "050": [
-        "Birthday",
         "Christmas"
     ],
     "051": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "052": [
         "Wedding"
     ],
     "053": [
         "Birthday",
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "PersonalArtActivity"
     ],
     "054": [
-        "PersonalMusicActivity",
         "Show"
     ],
     "055": [
         "Graduation"
     ],
     "056": [
-        "Birthday",
-        "CasualFamilyGather"
-    ],
-    "057": [
         "Birthday"
     ],
-    "058": [
-        "BusinessActivity"
+    "057": [
+        "Christmas"
     ],
-    "059": [
+    "058": [
+        "BusinessActivity",
         "PersonalArtActivity"
     ],
+    "059": [
+        "Architecture"
+    ],
     "060": [
-        "Birthday",
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "PersonalArtActivity"
     ],
     "061": [
-        "PersonalSports"
+        "PersonalArtActivity",
+        "PersonalSports",
+        "Protest"
     ],
     "062": [
-        "Halloween",
+        "Architecture",
         "PersonalArtActivity"
     ],
     "063": [
         "Wedding"
     ],
     "064": [
-        "BusinessActivity"
+        "Protest"
     ],
-    "065": [],
-    "066": [],
+    "065": [
+        "ThemePark"
+    ],
+    "066": [
+        "Protest"
+    ],
     "067": [
-        "PersonalMusicActivity",
-        "Show"
+        "Architecture"
     ],
-    "068": [],
+    "068": [
+        "Graduation"
+    ],
     "069": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "070": [
-        "BeachTrip"
+        "BeachTrip",
+        "Cruise",
+        "PersonalArtActivity"
     ],
     "071": [
-        "BusinessActivity"
+        "Architecture",
+        "Museum",
+        "PersonalArtActivity"
     ],
     "072": [
+        "PersonalArtActivity",
         "PersonalMusicActivity",
         "Show"
     ],
     "073": [
-        "BusinessActivity"
+        "BusinessActivity",
+        "ReligiousActivity"
     ],
     "074": [
         "Graduation"
     ],
     "075": [
-        "CasualFamilyGather"
+        "PersonalSports",
+        "Sports"
     ],
     "076": [
-        "PersonalMusicActivity",
+        "Protest",
         "Show"
     ],
     "077": [
         "Graduation"
     ],
     "078": [
-        "PersonalArtActivity"
+        "PersonalSports",
+        "Sports"
     ],
     "079": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Christmas"
     ],
     "080": [
-        "BusinessActivity"
+        "PersonalArtActivity",
+        "Protest"
     ],
     "081": [
         "Graduation"
     ],
     "082": [
+        "Christmas",
         "ThemePark"
     ],
     "083": [
         "Wedding"
     ],
-    "084": [],
+    "084": [
+        "Wedding"
+    ],
     "085": [
-        "BusinessActivity"
+        "BusinessActivity",
+        "ReligiousActivity"
     ],
-    "086": [],
+    "086": [
+        "PersonalArtActivity",
+        "Sports"
+    ],
     "087": [
-        "Graduation"
+        "Wedding"
     ],
-    "088": [],
+    "088": [
+        "Architecture",
+        "ReligiousActivity",
+        "UrbanTrip"
+    ],
     "089": [
         "Wedding"
     ],
@@ -270,25 +329,30 @@
     "091": [
         "PersonalArtActivity"
     ],
-    "092": [],
+    "092": [
+        "PersonalArtActivity",
+        "ReligiousActivity",
+        "Show"
+    ],
     "093": [
-        "Graduation"
+        "Architecture",
+        "PersonalArtActivity",
+        "Wedding"
     ],
     "094": [
-        "BeachTrip"
+        "Wedding"
     ],
     "095": [
         "Birthday",
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "PersonalArtActivity"
     ],
     "096": [],
     "097": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "098": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "099": [
         "Wedding"
@@ -297,82 +361,98 @@
         "Christmas"
     ],
     "101": [
-        "GroupActivity"
+        "Halloween"
     ],
     "102": [
-        "Graduation"
+        "ReligiousActivity",
+        "Wedding"
     ],
     "103": [
-        "CasualFamilyGather"
+        "PersonalArtActivity"
     ],
-    "104": [],
+    "104": [
+        "PersonalSports",
+        "Sports"
+    ],
     "105": [
-        "BusinessActivity",
-        "Graduation"
+        "ReligiousActivity"
     ],
     "106": [
         "Wedding"
     ],
     "107": [
-        "BusinessActivity"
+        "BusinessActivity",
+        "PersonalArtActivity"
     ],
     "108": [
-        "PersonalMusicActivity",
-        "Show"
+        "Graduation",
+        "ReligiousActivity"
     ],
     "109": [
-        "CasualFamilyGather"
+        "Graduation",
+        "PersonalArtActivity",
+        "ReligiousActivity"
     ],
     "110": [
-        "CasualFamilyGather"
+        "PersonalSports",
+        "Sports"
     ],
     "111": [
-        "Protest",
-        "Show"
+        "Protest"
     ],
     "112": [
-        "Birthday",
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "GroupActivity",
+        "Halloween"
     ],
     "113": [
         "Birthday",
-        "CasualFamilyGather"
+        "CasualFamilyGather",
+        "PersonalArtActivity"
     ],
     "114": [
         "Christmas"
     ],
     "115": [
-        "PersonalMusicActivity",
-        "Show"
+        "PersonalArtActivity",
+        "ReligiousActivity",
+        "Wedding"
     ],
     "116": [
-        "Birthday",
-        "CasualFamilyGather"
+        "Birthday"
     ],
     "117": [
         "Christmas"
     ],
     "118": [
-        "Wedding"
+        "Architecture",
+        "PersonalArtActivity",
+        "Show"
     ],
     "119": [
-        "PersonalMusicActivity",
+        "Architecture",
+        "ReligiousActivity",
         "Show"
     ],
     "120": [
-        "Show"
+        "Architecture",
+        "ReligiousActivity",
+        "Wedding"
     ],
     "121": [
+        "PersonalArtActivity",
         "Zoo"
     ],
-    "122": [],
+    "122": [
+        "PersonalArtActivity"
+    ],
     "123": [
-        "BusinessActivity"
+        "Protest"
     ],
     "124": [
         "Wedding"
     ],
     "125": [
-        "Birthday"
+        "Christmas"
     ]
 }
