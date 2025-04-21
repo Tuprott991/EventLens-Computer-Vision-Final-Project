@@ -63,22 +63,35 @@ class EventLens(nn.Module):
         self,
         num_labels,
         d_model=512,
-        nhead=8,
-        num_layers=8,
-        max_images=20,
-        backbone_name = 'convnext_base',
+        nhead=8,    
+        num_layers=6,
+        max_images=50,
+        backbone_name = 'convnextv2_base.fcmae_ft_in22k_in1k',
         pretrained_backbone=True
     ):
         super().__init__()
         # 1) Image feature extractor (ResNet50 backbone)\
         # Use ResNet50 as the backbone for image feature extraction
 
-        backbone = models.resnet50(pretrained=pretrained_backbone)
+        # backbone = models.resnet50(pretrained=pretrained_backbone)
+        # modules = list(backbone.children())[:-1]
+
+        # self.backbone = nn.Sequential(*modules)
+        # # project to transformer dimension
+        # self.proj = nn.Linear(backbone.fc.in_features, d_model)
 
         # Use Timm for Swin or other backbones if needed
 
         # backbone = timm.create_model('swin_base_patch4_window7_224', pretrained=pretrained_backbone)
 
+        self.backbone = timm.create_model(
+            backbone_name,
+            pretrained=pretrained_backbone,
+            num_classes=0,      # remove classification head
+        )
+
+        feat_dim = self.backbone.num_features
+        self.proj = nn.Linear(feat_dim, d_model)
         
         # 1) Image feature extractor (ConvNeXt backbone)
         # self.backbone = timm.create_model(
@@ -89,16 +102,9 @@ class EventLens(nn.Module):
         # )
 
         # remove the classification head
-        modules = list(backbone.children())[:-1]
         
-        self.backbone = nn.Sequential(*modules)
-        # project to transformer dimension
-        self.proj = nn.Linear(backbone.fc.in_features, d_model)
-
         # feat_dim = self.backbone.num_features
         # self.proj = nn.Linear(feat_dim, d_model)
-
-
         # 2) Learnable CLS token & positional embeddings for album
         self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
         self.pos_embed = nn.Parameter(torch.zeros(1, max_images + 1, d_model))
@@ -150,7 +156,7 @@ class EventLens(nn.Module):
         # x shape: (seq_len, b, d_model)
 
         # Album representation = CLS token output
-        album_repr = x[0]         # (b, d_model)
+        album_repr = x[0]  # (b, d_model)
         album_repr = self.norm(album_repr)
         album_repr = self.dropout(album_repr) 
 
