@@ -136,8 +136,11 @@ class EventLens(nn.Module):
         # Flatten batch & image dims
         imgs = images.view(b * n, c, h, w)
         # Extract features and project
-        feats = self.backbone(imgs).reshape(b, n, -1)
-        feats = self.proj(feats)  # (b, n, d_model)
+        # Extract features and project
+        feats = self.backbone(imgs)  # Output shape: (b * n, C, H, W)
+        feats = feats.flatten(1)    # Flatten to shape: (b * n, C * H * W)
+        feats = self.proj(feats)    # Project to (b * n, d_model)
+        feats = feats.view(b, n, -1)  # Reshape to (b, n, d_model)
 
         # Prepare CLS token + positional embeddings
         cls_tokens = self.cls_token.expand(b, -1, -1)       # (b, 1, d_model)
