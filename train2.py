@@ -15,8 +15,8 @@ from model_archi2 import EventLens  # Assuming your model is in model_arch.py
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23
-BATCH_SIZE = 4
-LEARNING_RATE = 3e-5
+BATCH_SIZE = 128
+LEARNING_RATE = 1e-4
 EPOCHS = 30
 FREEZE_EPOCHS = 7
 MAX_IMAGES = 20
@@ -105,6 +105,8 @@ def freeze_backbone(model, freeze=True):
     for param in model.backbone.parameters():
         param.requires_grad = not freeze
 
+freeze_backbone(model)
+
 # --- Evaluation: Calculate Loss & mAP ---
 @torch.no_grad()
 def evaluate(model, dataloader):
@@ -141,12 +143,12 @@ def evaluate(model, dataloader):
 for epoch in range(EPOCHS):
     print(f"\nEpoch {epoch+1}/{EPOCHS}")
 
-    if epoch < FREEZE_EPOCHS:
-        freeze_backbone(model, freeze=True)
-        print("Backbone frozen for this epoch.")
-    else:
-        freeze_backbone(model, freeze=False)
-        print("Backbone unfrozen for this epoch.")
+    # if epoch < FREEZE_EPOCHS:
+    #     freeze_backbone(model, freeze=True)
+    #     print("Backbone frozen for this epoch.")
+    # else:
+    #     freeze_backbone(model, freeze=False)
+    #     print("Backbone unfrozen for this epoch.")
 
     model.train()
     train_loss = 0
