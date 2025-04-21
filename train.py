@@ -18,9 +18,9 @@ IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23   
 BATCH_SIZE = 128
 LEARNING_RATE = 1e-4
-EPOCHS = 20
+EPOCHS = 30
 FREEZE_EPOCHS = 5
-MAX_IMAGES = 20
+MAX_IMAGES = 50
 VAL_RATIO = 0.2
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
