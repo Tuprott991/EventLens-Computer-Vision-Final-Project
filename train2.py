@@ -16,8 +16,8 @@ from model_archi2 import EventLens  # Assuming your model is in model_arch.py
 JSON_PATH = '/kaggle/input/thesis-cufed/CUFED/event_type.json'
 IMAGE_ROOT = '/kaggle/input/thesis-cufed/CUFED/images'
 NUM_LABELS = 23
-BATCH_SIZE = 32
-LEARNING_RATE = 5e-5
+BATCH_SIZE = 4
+LEARNING_RATE = 1e-5
 EPOCHS = 30
 FREEZE_EPOCHS = 7
 MAX_IMAGES = 20
@@ -97,7 +97,7 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 # --- Early Stopping ---
 best_val_map = 0.0  # Track best mAP (higher is better)
-patience = 8
+patience = 4
 counter = 0
 best_model_state = None
 os.makedirs("checkpoints", exist_ok=True)
@@ -110,7 +110,7 @@ def freeze_backbone(model, freeze=True):
     for param in model.backbone.parameters():
         param.requires_grad = not freeze
 
-freeze_backbone(model, freeze=True)
+# freeze_backbone(model, freeze=True)
 
 # --- Evaluation: Calculate Loss & mAP ---
 @torch.no_grad()
