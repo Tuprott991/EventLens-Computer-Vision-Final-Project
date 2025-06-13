@@ -18,7 +18,7 @@ model_labels = ['Architecture', 'BeachTrip', 'Birthday', 'BusinessActivity', 'Ca
                 'ThemePark', 'UrbanTrip', 'Wedding', 'Zoo']
 
 model = EventLens(num_labels=NUM_LABELS)
-model.load_state_dict(torch.load('eventlens_best_model.pth'))
+model.load_state_dict(torch.load('eventlens_best_model_convNeXT_v2.pth'))
 model = model.to(DEVICE)
 model.eval()
 
