@@ -5,7 +5,7 @@ import base64
 import cv2
 
 import numpy as np
-API_URL = "http://localhost:8000/predict/"  # Change to real API endpoint 
+API_URL = "http://103.78.3.25:8000:8000/predict/"  # Change to real API endpoint 
 
 def decode_numpy_image(img_b64):
     # If your API returns the image as a base64 string
