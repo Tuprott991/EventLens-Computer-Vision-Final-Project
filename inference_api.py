@@ -17,9 +17,15 @@ def decode_numpy_image(img_b64):
 def predict_album_api(uploaded_files):
     files = []
     for file in uploaded_files:
-        # file is a file-like object (e.g., _TemporaryFileWrapper)
-        file.seek(0)
-        files.append(('files', (os.path.basename(file.name), file, 'image/jpeg')))
+        # Nếu là file-like object
+        if hasattr(file, "seek") and hasattr(file, "read"):
+            file.seek(0)
+            files.append(('files', (os.path.basename(file.name), file, 'image/jpeg')))
+        # Nếu là NamedString (Gradio có thể trả về kiểu này trên server)
+        elif hasattr(file, "name") and hasattr(file, "data"):
+            files.append(('files', (os.path.basename(file.name), file.data, 'image/jpeg')))
+        else:
+            raise ValueError(f"Unsupported file type: {type(file)}")
     try:
         response = requests.post(API_URL, files=files)
         result = response.json()
