@@ -22,8 +22,9 @@ def predict_album_api(uploaded_files):
             file.seek(0)
             files.append(('files', (os.path.basename(file.name), file, 'image/jpeg')))
         # Nếu là NamedString (Gradio có thể trả về kiểu này trên server)
-        elif hasattr(file, "name") and hasattr(file, "data"):
-            files.append(('files', (os.path.basename(file.name), file.data, 'image/jpeg')))
+        elif hasattr(file, "name") and hasattr(file, "value"):
+            # file.value là nội dung file dạng bytes
+            files.append(('files', (os.path.basename(file.name), file.value, 'image/jpeg')))
         else:
             raise ValueError(f"Unsupported file type: {type(file)}")
     try:
