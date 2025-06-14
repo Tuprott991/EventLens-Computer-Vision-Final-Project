@@ -8,3 +8,6 @@ tqdm
 timm
 transformers
 pillow
+timm
+opencv-python
+
