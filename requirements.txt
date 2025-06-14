@@ -1,5 +1,4 @@
-torchvision
-torch
+gradio
 numpy
 pandas
 scikit-learn
@@ -11,3 +10,6 @@ pillow
 opencv-python
 uvicorn
 fastapi
+torch --index-url https://download.pytorch.org/whl/cu121
+torchvision --index-url https://download.pytorch.org/whl/cu121
+torchaudio --index-url https://download.pytorch.org/whl/cu121
