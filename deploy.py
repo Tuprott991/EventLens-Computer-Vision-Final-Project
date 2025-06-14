@@ -79,3 +79,4 @@ async def predict(files: list[UploadFile] = File(...)):
         os.rmdir(album_folder)
 
 
+

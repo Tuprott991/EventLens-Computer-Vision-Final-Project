@@ -17,17 +17,15 @@ def decode_numpy_image(img_b64):
 def predict_album_api(uploaded_files):
     files = []
     for file in uploaded_files:
-        files.append(('files', (file.name, open(file.name, 'rb'), 'image/jpeg')))
+        # file is a file-like object (e.g., _TemporaryFileWrapper)
+        file.seek(0)
+        files.append(('files', (os.path.basename(file.name), file, 'image/jpeg')))
     try:
         response = requests.post(API_URL, files=files)
         result = response.json()
         album_labels = result.get("labels", {})
-        # If your API returns attention images, handle them here
         rearranged_images = result.get("rearranged_images", [])
-        # Only return the first image if it's a list of images
-       # If rearranged_images is a list of base64-encoded images
         if isinstance(rearranged_images, list) and len(rearranged_images) > 0:
-            # If it's a numpy array encoded as base64 string
             image_to_show = decode_numpy_image(rearranged_images[0])
         elif isinstance(rearranged_images, str):
             image_to_show = decode_numpy_image(rearranged_images)
@@ -37,7 +35,6 @@ def predict_album_api(uploaded_files):
         return album_labels, image_to_show
 
     finally:
-        # Clean up temp files if needed
         pass
 
 iface = gr.Interface(
